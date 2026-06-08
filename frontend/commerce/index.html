@@ -3,9 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Comercio - Reputation Manager</title>
+    <title>Panel de Control del Comercio - Reputation Manager</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <h1>Dashboard Comercio</h1>
+<body class="bg-gray-50/50 min-h-screen font-sans antialiased text-gray-800">
+
+    <!-- Auth check script (runs instantly to prevent layout flash) -->
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+    </script>
+
+    <!-- Navigation Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white font-outfit font-bold px-3 py-1.5 rounded-xl text-lg shadow-sm">RM</div>
+                <span class="font-outfit font-bold text-gray-800 tracking-tight text-lg" id="navbar-commerce-name">Cargando local...</span>
+                <span class="bg-emerald-50 text-emerald-700 text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Admin</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="user-display" class="text-xs text-gray-500 font-medium">Usuario</span>
+                <button onclick="logout()" class="text-xs text-red-500 hover:text-red-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        
+        <!-- Stats Summary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Scans -->
+            <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <p class="text-3xs font-bold text-gray-400 uppercase tracking-widest mb-1">Opiniones Totales</p>
+                <h3 id="stat-scans" class="font-outfit text-3xl font-bold text-gray-800">-</h3>
+                <span class="text-3xs text-gray-400">Total escaneos y valoraciones</span>
+            </div>
+            <!-- Average Rating -->
+            <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <p class="text-3xs font-bold text-gray-400 uppercase tracking-widest mb-1">Promedio de Estrellas</p>
+                <div class="flex items-baseline space-x-2">
+                    <h3 id="stat-rating" class="font-outfit text-3xl font-bold text-gray-800">-</h3>
+                    <span class="text-amber-500 text-sm">★</span>
+                </div>
+                <span class="text-3xs text-gray-400">Puntaje acumulado interno</span>
+            </div>
+            <!-- Positive (Google Maps) -->
+            <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <p class="text-3xs font-bold text-gray-400 uppercase tracking-widest mb-1">Derivados a Google</p>
+                <h3 id="stat-positives" class="font-outfit text-3xl font-bold text-emerald-600">-</h3>
+                <span class="text-3xs text-gray-400">Clientes contentos (4-5 estrellas)</span>
+            </div>
+            <!-- Negative (Containment) -->
+            <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                <p class="text-3xs font-bold text-gray-400 uppercase tracking-widest mb-1">Feedback de Contención</p>
+                <h3 id="stat-negatives" class="font-outfit text-3xl font-bold text-red-500">-</h3>
+                <span class="text-3xs text-gray-400">Quejas contenidas (1-3 estrellas)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Panel: Star Distribution & Tag Clouds -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Star Distribution -->
+                <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                    <h2 class="font-outfit text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider text-gray-400">Distribución de Estrellas</h2>
+                    <div id="stars-distribution" class="space-y-3">
+                        <!-- Loaded dynamically -->
+                        <p class="text-xs text-gray-400">Cargando gráfico...</p>
+                    </div>
+                </div>
+
+                <!-- Tag Frequency -->
+                <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                    <h2 class="font-outfit text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider text-gray-400">Qué es lo que más gusta</h2>
+                    <div id="tags-cloud" class="flex flex-wrap gap-2">
+                        <!-- Loaded dynamically -->
+                        <p class="text-xs text-gray-400 italic">No hay suficientes datos de tags.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Containment Feedback list (1-3 stars comments) -->
+            <div class="lg:col-span-2">
+                <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="font-outfit text-md font-bold text-gray-800">Comentarios de Contención Privados</h2>
+                        <span class="bg-red-50 text-red-700 text-3xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">Únicamente 1-3 estrellas</span>
+                    </div>
+
+                    <div id="feedbacks-container" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                        <!-- Loaded dynamically -->
+                        <p class="text-xs text-gray-400 text-center py-12">Cargando comentarios privados...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="/frontend/js/api.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                // Verify credentials and get current user details
+                const user = await API.getMe(token);
+                
+                if (user.role !== 'commerce_admin' && user.role !== 'super_admin') {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                document.getElementById('user-display').innerText = user.username;
+                
+                // Load data
+                loadDashboardData();
+            } catch (e) {
+                logout();
+            }
+        });
+
+        async function loadDashboardData() {
+            try {
+                // Fetch Stats
+                const stats = await API.getStats(token);
+                // Fetch private feedbacks
+                const feedbacks = await API.getFeedbacks(token);
+                
+                // Get commerce details to set navbar title
+                const user = await API.getMe(token);
+                const commerce = await API.getCommerce(user.commerce_id);
+                document.getElementById('navbar-commerce-name').innerText = commerce.name;
+
+                renderStats(stats);
+                renderFeedbacks(feedbacks);
+            } catch (err) {
+                alert("Error al cargar la información del panel: " + err.message);
+            }
+        }
+
+        function renderStats(stats) {
+            document.getElementById('stat-scans').innerText = stats.total_opinions;
+            document.getElementById('stat-rating').innerText = stats.average_rating;
+            document.getElementById('stat-positives').innerText = stats.positive_count;
+            document.getElementById('stat-negatives').innerText = stats.private_count;
+
+            // Render distribution bars
+            const distContainer = document.getElementById('stars-distribution');
+            const total = stats.total_opinions || 1;
+            distContainer.innerHTML = [5, 4, 3, 2, 1].map(stars => {
+                const count = stats.distribution[stars] || 0;
+                const percentage = Math.round((count / total) * 100);
+                return `
+                    <div class="flex items-center text-xs">
+                        <span class="w-4 font-semibold text-gray-600">${stars}★</span>
+                        <div class="flex-1 bg-gray-100 h-2.5 mx-3 rounded-full overflow-hidden">
+                            <div class="bg-amber-400 h-full rounded-full" style="width: ${percentage}%"></div>
+                        </div>
+                        <span class="w-8 text-right text-gray-400">${count}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Render tags cloud
+            const tagsContainer = document.getElementById('tags-cloud');
+            if (stats.tags_frequency.length === 0) {
+                tagsContainer.innerHTML = `<p class="text-xs text-gray-400 italic py-2">No se han registrado etiquetas destacadas todavía.</p>`;
+                return;
+            }
+            tagsContainer.innerHTML = stats.tags_frequency.map(t => `
+                <div class="bg-indigo-50 border border-indigo-100 rounded-full px-3.5 py-1.5 text-xs text-indigo-700 font-semibold flex items-center">
+                    <span>${t.tag}</span>
+                    <span class="bg-indigo-600 text-white rounded-full h-4 min-w-4 px-1 flex items-center justify-center text-3xs font-bold ml-2">${t.count}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderFeedbacks(feedbacks) {
+            const container = document.getElementById('feedbacks-container');
+            if (feedbacks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-4xl mb-4">🎉</div>
+                        <h3 class="text-sm font-semibold text-gray-800 mb-1">¡No hay comentarios negativos!</h3>
+                        <p class="text-xs text-gray-400">¡Tu negocio está funcionando de maravillas o no se han recibido quejas privadas aún!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = feedbacks.map(f => {
+                const starsHtml = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
+                const dateStr = new Date(f.created_at).toLocaleString('es-ES', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                
+                return `
+                    <div class="p-5 border border-gray-100 rounded-2xl bg-gray-50/20 hover:border-red-100 transition duration-150">
+                        <div class="flex items-center justify-between mb-3.5">
+                            <div class="text-amber-500 font-bold text-sm tracking-widest">${starsHtml}</div>
+                            <span class="text-3xs text-gray-400 font-medium">${dateStr}</span>
+                        </div>
+                        <p class="text-xs text-gray-700 leading-relaxed bg-white border border-gray-50 p-4 rounded-xl shadow-sm italic">
+                            "${f.comment || 'El cliente no dejó comentarios de texto, solo la valoración.'}"
+                        </p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+    </script>
 </body>
 </html>

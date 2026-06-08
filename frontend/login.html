@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Reputation Manager</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at 100% 100%, #f5f7ff 0%, #eef2ff 50%, #e0e7ff 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 antialiased">
+
+    <div class="glass-card w-full max-w-md rounded-[2rem] shadow-2xl p-8 transform hover:scale-[1.005] transition-all duration-200">
+        
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white font-outfit text-2xl font-bold shadow-lg shadow-indigo-200 mb-4">
+                RM
+            </div>
+            <h1 class="font-outfit text-2xl font-bold text-gray-800 tracking-tight">Bienvenido de nuevo</h1>
+            <p class="text-xs text-gray-400 mt-1.5">Ingresa al panel de control de tu reputación</p>
+        </div>
+
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label for="username" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Usuario</label>
+                <input type="text" id="username" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm text-gray-700 placeholder-gray-300" placeholder="Ingresa tu usuario">
+            </div>
+
+            <div>
+                <label for="password" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contraseña</label>
+                <input type="password" id="password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm text-gray-700 placeholder-gray-300" placeholder="••••••••">
+            </div>
+
+            <div id="error-message" class="hidden text-xs text-red-500 bg-red-50 border border-red-100 p-3 rounded-xl text-center"></div>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-indigo-100 transition duration-200 text-sm">
+                Iniciar Sesión
+            </button>
+        </form>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="/frontend/js/api.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorBox = document.getElementById('error-message');
+            
+            errorBox.classList.add('hidden');
+            
+            try {
+                // 1. Authenticate with credentials
+                const data = await API.login(usernameInput, passwordInput);
+                const token = data.access_token;
+                
+                // Save token locally
+                localStorage.setItem('token', token);
+                
+                // 2. Fetch User Info to check Role
+                const user = await API.getMe(token);
+                
+                // Redirect based on role
+                if (user.role === 'super_admin') {
+                    window.location.href = '/admin/index.html';
+                } else if (user.role === 'commerce_admin') {
+                    window.location.href = '/commerce/index.html';
+                } else {
+                    throw new Error("Rol de usuario desconocido");
+                }
+            } catch (err) {
+                errorBox.innerText = err.message || "Error al iniciar sesión";
+                errorBox.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

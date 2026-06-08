@@ -22,11 +22,14 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["aut
 app.include_router(public.router, prefix=f"{settings.API_V1_STR}/public", tags=["public"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(commerce.router, prefix=f"{settings.API_V1_STR}/commerce", tags=["commerce"])
+import os
+from fastapi.staticfiles import StaticFiles
 
+# Resolve path to frontend directory dynamically
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
+frontend_dir = os.path.join(project_root, "frontend")
 
+# Mount frontend static files at root URL
+app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Google Maps Reputation Manager API is running"}
