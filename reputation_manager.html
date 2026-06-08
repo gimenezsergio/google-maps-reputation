@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reputation Manager - Restaurant Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .star-rating { direction: rtl; display: inline-flex; }
+        .star-rating input { display: none; }
+        .star-rating label { color: #ddd; font-size: 2.5rem; padding: 0 0.1rem; cursor: pointer; transition: color 0.2s; }
+        .star-rating label:hover, .star-rating label:hover ~ label, .star-rating input:checked ~ label { color: #fbbf24; }
+        .pills-container { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .pill { cursor: pointer; transition: all 0.2s; }
+        .pill-active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden transition-all duration-300">
+        <!-- Contenido dinámico via JS -->
+        <div id="screen-container" class="p-8">
+            <div class="flex justify-center mb-6">
+                <div class="animate-pulse bg-gray-200 h-12 w-12 rounded-full"></div>
+            </div>
+            <h2 class="text-center text-xl font-semibold text-gray-800">Cargando experiencia...</h2>
+        </div>
+    </div>
+
+    <!-- Firebase & API Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Configuración de entorno (Globales del sistema)
+        const apiKey = ""; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'reputacion-restaurante-default';
+        const firebaseConfig = JSON.parse(__firebase_config);
+        
+        // Inicialización de servicios
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Estado Global de la App
+        let state = {
+            step: 'loading',
+            rating: 0,
+            tags: [],
+            feedback: '',
+            aiResults: [],
+            loading: false,
+            error: null,
+            user: null
+        };
+
+        const tagsPool = [
+            { id: 'comida_rica', label: 'Comida deliciosa', category: 'comida' },
+            { id: 'buen_servicio', label: 'Servicio rápido', category: 'servicio' },
+            { id: 'mozo_amable', label: 'Mozo muy amable', category: 'servicio' },
+            { id: 'ambiente_lindo', label: 'Lugar acogedor', category: 'ambiente' },
+            { id: 'vistas', label: 'Lindas vistas', category: 'ambiente' },
+            { id: 'precios', label: 'Buena relación precio/calidad', category: 'precio' },
+            { id: 'limpieza', label: 'Impecable y limpio', category: 'ambiente' },
+            { id: 'porciones', label: 'Porciones abundantes', category: 'comida' },
+            { id: 'musica', label: 'Música agradable', category: 'ambiente' },
+            { id: 'variedad', label: 'Menú variado', category: 'comida' },
+            { id: 'espera_corta', label: 'Poca espera', category: 'servicio' },
+            { id: 'pet_friendly', label: 'Pet friendly', category: 'ambiente' }
+        ];
+
+        // --- Manejo de Autenticación (Regla 3) ---
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Error de autenticación:", err);
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            state.user = user;
+            if (state.step === 'loading') {
+                state.step = 'rating';
+            }
+            render();
+        });
+
+        // --- Utilidades de UI ---
+        function render() {
+            const container = document.getElementById('screen-container');
+            
+            if (state.loading) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <p class="text-gray-500 text-center">${state.step === 'ai' ? 'Nuestra IA está redactando tu reseña...' : 'Procesando...'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            switch(state.step) {
+                case 'loading':
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center py-12">
+                            <div class="animate-pulse bg-gray-200 h-12 w-12 rounded-full mb-4"></div>
+                            <h2 class="text-center text-xl font-semibold text-gray-800">Iniciando sistema...</h2>
+                        </div>
+                    `;
+                    break;
+
+                case 'rating':
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">¡Hola!</h2>
+                            <p class="text-gray-500 mb-8">¿Cómo calificarías tu experiencia hoy?</p>
+                            <div class="star-rating mb-8">
+                                <input type="radio" id="star5" name="rating" value="5" /><label for="star5" onclick="setRating(5)">★</label>
+                                <input type="radio" id="star4" name="rating" value="4" /><label for="star4" onclick="setRating(4)">★</label>
+                                <input type="radio" id="star3" name="rating" value="3" /><label for="star3" onclick="setRating(3)">★</label>
+                                <input type="radio" id="star2" name="rating" value="2" /><label for="star2" onclick="setRating(2)">★</label>
+                                <input type="radio" id="star1" name="rating" value="1" /><label for="star1" onclick="setRating(1)">★</label>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'contencion':
+                    container.innerHTML = `
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Queremos mejorar</h2>
+                            <p class="text-sm text-gray-500 mb-4">Lamentamos que no haya sido perfecto. Contanos qué falló para que el dueño pueda solucionarlo.</p>
+                            <textarea id="feedback-text" class="w-full border rounded-xl p-4 h-32 mb-4 focus:ring-2 focus:ring-red-500 outline-none" placeholder="¿Qué podemos hacer mejor?"></textarea>
+                            <button onclick="submitNegativeFeedback()" class="w-full bg-red-500 text-white font-semibold py-3 rounded-xl hover:bg-red-600 transition shadow-lg">Enviar comentario privado</button>
+                            <button onclick="goToStep('rating')" class="w-full mt-2 text-gray-400 text-sm py-2">Volver</button>
+                        </div>
+                    `;
+                    break;
+
+                case 'tags':
+                    container.innerHTML = `
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">¡Genial!</h2>
+                            <p class="text-sm text-gray-500 mb-6">¿Qué fue lo que más te gustó? (Seleccioná uno o varios)</p>
+                            <div class="pills-container mb-8">
+                                ${tagsPool.map(t => `
+                                    <div onclick="toggleTag('${t.id}')" class="pill px-4 py-2 border rounded-full text-sm font-medium ${state.tags.includes(t.id) ? 'pill-active' : 'bg-gray-100 text-gray-600 border-gray-200'}">
+                                        ${t.label}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="generateAiReviews()" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg disabled:opacity-50" ${state.tags.length === 0 ? 'disabled' : ''}>Generar mi reseña</button>
+                        </div>
+                    `;
+                    break;
+
+                case 'ai':
+                    container.innerHTML = `
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 mb-4">Elegí la que más te guste</h2>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
+                                <p class="text-sm text-yellow-800 font-medium">
+                                    <strong class="font-bold">Importante:</strong> Al elegir una opción, el texto se copiará. En la siguiente pantalla, deberás <strong class="underline">PEGARLO</strong> manualmente en Google Maps.
+                                </p>
+                            </div>
+                            <div class="space-y-4 mb-8">
+                                ${state.aiResults.map((res, i) => `
+                                    <div onclick="copyAndRedirect('${res.replace(/'/g, "\\'")}')" class="p-4 border border-gray-200 rounded-2xl hover:border-blue-500 cursor-pointer transition bg-blue-50/30">
+                                        <p class="text-sm text-gray-700 leading-relaxed italic">"${res}"</p>
+                                        <div class="mt-3 text-xs text-blue-600 font-semibold flex items-center">
+                                            <span>Tocar para copiar y continuar</span>
+                                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="goToStep('tags')" class="w-full text-gray-400 text-sm py-2">Cambiar etiquetas</button>
+                        </div>
+                    `;
+                    break;
+
+                case 'gracias':
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-500 rounded-full mb-6 text-3xl">✓</div>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">¡Muchas gracias!</h2>
+                            <p class="text-gray-500">Tu opinión nos ayuda a crecer cada día.</p>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        // --- Funciones de Lógica ---
+        window.setRating = (val) => {
+            state.rating = val;
+            if (val <= 3) {
+                state.step = 'contencion';
+            } else {
+                state.step = 'tags';
+            }
+            render();
+        };
+
+        window.goToStep = (s) => {
+            state.step = s;
+            render();
+        };
+
+        window.toggleTag = (id) => {
+            if (state.tags.includes(id)) {
+                state.tags = state.tags.filter(t => t !== id);
+            } else {
+                state.tags.push(id);
+            }
+            render();
+        };
+
+        window.submitNegativeFeedback = async () => {
+            const text = document.getElementById('feedback-text').value;
+            if (!text.trim()) return;
+            
+            // Verificación de Auth antes de Query (Regla 3)
+            if (!auth.currentUser) {
+                state.loading = true; render();
+                await initAuth();
+                if (!auth.currentUser) {
+                    state.loading = false;
+                    showMessage("Error de autenticación. Intenta de nuevo.");
+                    return;
+                }
+            }
+
+            state.loading = true; render();
+            
+            try {
+                // Guardar en ruta estricta (Regla 1)
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'negative_feedback'), {
+                    rating: state.rating,
+                    comment: text,
+                    userId: auth.currentUser.uid,
+                    timestamp: serverTimestamp()
+                });
+                state.step = 'gracias';
+            } catch (e) {
+                console.error("Firestore Error:", e);
+                showMessage("Permisos insuficientes o error de conexión.");
+            } finally {
+                state.loading = false; render();
+            }
+        };
+
+        window.generateAiReviews = async () => {
+            state.loading = true; state.step = 'ai'; render();
+            
+            const selectedLabels = tagsPool.filter(t => state.tags.includes(t.id)).map(t => t.label).join(', ');
+            const prompt = `Eres un turista en España escribiendo una reseña de Google Maps. 
+            Calificación: 5 estrellas. Puntos destacados: ${selectedLabels}. 
+            Genera 5 opciones de reseña (Corta, Detallada, Entusiasta, Formal, Casual) en español de España. 
+            Responde SOLO con un JSON objeto: { "opciones": ["reseña1", "reseña2", "reseña3", "reseña4", "reseña5"] }`;
+
+            try {
+                const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                
+                const data = await response.json();
+                const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                state.aiResults = JSON.parse(jsonText).opciones;
+            } catch (e) {
+                state.aiResults = [
+                    `Excelente atención y ${selectedLabels.toLowerCase()}. Totalmente recomendado.`,
+                    `Me encantó el lugar, especialmente por ${selectedLabels.toLowerCase()}. Volveremos seguro.`,
+                    `Un sitio increíble en la zona. Destaco ${selectedLabels.toLowerCase()}. 10/10.`,
+                    `Muy buena experiencia. Destaco ${selectedLabels.toLowerCase()}, hicieron que valiera la pena.`,
+                    `Todo perfecto, desde el trato hasta ${selectedLabels.toLowerCase()}. Sitio de referencia.`
+                ];
+            } finally {
+                state.loading = false; render();
+            }
+        };
+
+        async function fetchWithRetry(url, options, retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) return res;
+                } catch (e) {}
+                await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+            }
+            throw new Error("API fallida tras varios intentos");
+        }
+
+        window.copyAndRedirect = (text) => {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            showMessage("¡Copiado! Redirigiendo a Google Maps...");
+            
+            setTimeout(() => {
+                // Enlace directo al modal de reseñas usando un Place ID de prueba
+                window.open('https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4', '_blank');
+                state.step = 'gracias';
+                render();
+            }, 1500);
+        };
+
+        function showMessage(msg) {
+            const box = document.createElement('div');
+            box.className = "fixed bottom-4 left-4 right-4 bg-gray-900 text-white px-6 py-3 rounded-2xl text-center text-sm shadow-2xl z-50 animate-pulse";
+            box.innerText = msg;
+            document.body.appendChild(box);
+            setTimeout(() => box.remove(), 4000);
+        }
+
+        // Iniciar autenticación al cargar
+        initAuth();
+
+    </script>
+</body>
+</html>

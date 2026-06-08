@@ -1,0 +1,24 @@
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Configuration and Secrets
+.env
+
+# Database (SQLite)
+*.sqlite
+*.sqlite3
+*.db
+backend/app/reputation.db
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
