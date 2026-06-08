@@ -153,6 +153,25 @@
     <script>
         let commerces = [];
 
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-5 right-5 px-5 py-3.5 rounded-2xl text-xs font-semibold shadow-2xl border z-50 transition-all duration-300 transform translate-y-10 opacity-0 flex items-center space-x-2`;
+            if (type === 'success') {
+                toast.className += ' bg-emerald-50 border-emerald-100 text-emerald-700';
+            } else {
+                toast.className += ' bg-rose-50 border-rose-100 text-rose-700';
+            }
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         document.addEventListener("DOMContentLoaded", async () => {
             // Validate user role
             try {
@@ -173,7 +192,7 @@
                 commerces = await API.getCommerces(token);
                 renderCommercesList();
             } catch (e) {
-                alert("Error al cargar la lista de comercios: " + e.message);
+                showToast("Error al cargar la lista de comercios: " + e.message, "error");
             }
         }
 
@@ -243,19 +262,19 @@
                     // EDIT MODE
                     const is_active = document.getElementById('is-active').checked;
                     await API.updateCommerce(token, editId, { name, slug, logo_url, google_place_id, tags, is_active });
-                    alert("Comercio actualizado con éxito");
+                    showToast("Comercio actualizado con éxito", "success");
                 } else {
                     // CREATE MODE
                     const admin_username = document.getElementById('admin-username').value;
                     const admin_password = document.getElementById('admin-password').value;
                     await API.createCommerce(token, { name, slug, logo_url, google_place_id, tags, admin_username, admin_password });
-                    alert("Comercio y usuario administrador creados con éxito");
+                    showToast("Comercio y usuario administrador creados con éxito", "success");
                 }
                 
                 resetForm();
                 loadCommerces();
             } catch (err) {
-                alert("Error: " + err.message);
+                showToast("Error: " + err.message, "error");
             }
         });
 
@@ -288,10 +307,10 @@
             if (!confirm("¿Estás seguro de que deseas desactivar este comercio?")) return;
             try {
                 await API.deleteCommerce(token, id);
-                alert("Comercio desactivado con éxito");
+                showToast("Comercio desactivado con éxito", "success");
                 loadCommerces();
             } catch (e) {
-                alert("Error al desactivar: " + e.message);
+                showToast("Error al desactivar: " + e.message, "error");
             }
         }
 

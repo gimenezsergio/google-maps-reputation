@@ -50,28 +50,28 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="h-screen sm:min-h-screen flex items-center justify-center sm:p-4 antialiased overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
-    <div id="app" class="glass-card rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:scale-[1.01]">
+    <div id="app" class="glass-card w-full h-full sm:h-auto sm:max-w-md rounded-none sm:rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 overflow-hidden flex flex-col transition-all duration-300">
         
-        <!-- Header con Logo del Comercio -->
-        <div class="px-8 pt-8 pb-4 flex flex-col items-center border-b border-gray-100/50">
-            <div class="relative mb-4">
+        <!-- Header con Logo del Comercio (Fixed at top) -->
+        <div class="px-6 pt-6 pb-3 sm:px-8 sm:pt-8 sm:pb-4 flex flex-col items-center border-b border-gray-100/50 shrink-0">
+            <div class="relative mb-3 sm:mb-4">
                 <!-- Circular border glow effect -->
                 <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full blur opacity-30 animate-pulse"></div>
                 <!-- Actual logo container -->
-                <div class="relative bg-white h-20 w-20 rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-gray-50">
+                <div class="relative bg-white h-16 w-16 sm:h-20 sm:w-20 rounded-full flex items-center justify-center shadow-inner overflow-hidden border border-gray-50">
                     <img id="commerce-logo" class="h-full w-full object-cover hidden" alt="Logo Comercio">
-                    <div id="logo-placeholder" class="h-full w-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-3xl font-bold font-outfit">
+                    <div id="logo-placeholder" class="h-full w-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold font-outfit">
                         <span id="logo-initial">-</span>
                     </div>
                 </div>
             </div>
-            <h1 id="commerce-name" class="font-outfit text-xl font-bold text-gray-800 text-center tracking-tight leading-tight">-</h1>
+            <h1 id="commerce-name" class="font-outfit text-lg sm:text-xl font-bold text-gray-800 text-center tracking-tight leading-tight">-</h1>
         </div>
 
-        <!-- Contenedor de pantallas cargadas via main.js -->
-        <div id="screen-container" class="p-8">
+        <!-- Contenedor de pantallas cargadas via main.js (Scrolls internally if too tall) -->
+        <div id="screen-container" class="flex-1 overflow-y-auto p-6 sm:p-8">
             <div class="flex flex-col items-center py-12">
                 <div class="animate-pulse flex space-x-2">
                     <div class="h-3 w-3 bg-indigo-500 rounded-full"></div>
@@ -83,6 +83,7 @@
         </div>
         
     </div>
+
 
     <!-- Scripts -->
     <script src="/js/api.js"></script>
