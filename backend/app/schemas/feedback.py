@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field, ConfigDict
 class FeedbackBase(BaseModel):
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
+    tags: Optional[list[str]] = []
+
 
 
 class FeedbackCreate(FeedbackBase):

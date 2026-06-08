@@ -53,10 +53,12 @@ def create_public_feedback(
     db_feedback = Feedback(
         commerce_id=commerce.id,
         rating=feedback_in.rating,
-        comment=comment
+        comment=comment,
+        tags=feedback_in.tags
     )
     db.add(db_feedback)
     db.commit()
+
     
     return {"status": "success", "message": "Feedback registrado correctamente"}
 
