@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.core.config import settings
 from app.core.security import create_access_token, verify_password
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.user import Token, UserOut
 
 router = APIRouter()
@@ -27,6 +27,14 @@ def login_access_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario o contraseña incorrectos"
         )
+    
+    # Check if user is associated with an inactive commerce
+    if user.role == UserRole.COMMERCE_ADMIN:
+        if not user.commerce_id or not user.commerce or not user.commerce.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El comercio asociado a esta cuenta está inactivo"
+            )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {

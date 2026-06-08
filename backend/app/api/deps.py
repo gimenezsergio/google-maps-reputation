@@ -36,6 +36,15 @@ def get_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado"
         )
+    
+    # Check if user is associated with an inactive commerce
+    if user.role == UserRole.COMMERCE_ADMIN:
+        if not user.commerce_id or not user.commerce or not user.commerce.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El comercio asociado a esta cuenta está inactivo"
+            )
+            
     return user
 
 
