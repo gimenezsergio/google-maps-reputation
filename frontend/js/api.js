@@ -132,6 +132,22 @@ const API = {
         return response.json();
     },
 
+    async parseMapsUrl(token, url) {
+        const response = await fetch(`${API_BASE_URL}/admin/parse-maps-url`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ url })
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Error al procesar el enlace de Google Maps");
+        }
+        return response.json();
+    },
+
     // COMMERCE ADMIN ENDPOINTS
     async getMyCommerce(token) {
         const response = await fetch(`${API_BASE_URL}/commerce/my-commerce`, {

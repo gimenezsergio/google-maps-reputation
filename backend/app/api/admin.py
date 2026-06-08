@@ -6,7 +6,13 @@ from app.api import deps
 from app.core.security import get_password_hash
 from app.models.commerce import Commerce
 from app.models.user import User, UserRole
-from app.schemas.commerce import CommerceOut, CommerceAdminCreate, CommerceUpdate
+from app.schemas.commerce import (
+    CommerceOut, 
+    CommerceAdminCreate, 
+    CommerceUpdate,
+    MapsUrlParseRequest,
+    MapsUrlParseResponse
+)
 
 router = APIRouter()
 
@@ -138,3 +144,88 @@ def delete_commerce(
     db.commit()
     
     return {"status": "success", "message": "Comercio desactivado correctamente"}
+
+
+@router.post("/parse-maps-url", response_model=MapsUrlParseResponse)
+def parse_google_maps_url(
+    *,
+    payload: MapsUrlParseRequest,
+    current_super_admin: User = Depends(deps.get_current_super_admin)
+) -> Any:
+    """
+    Parse a Google Maps URL (or short link) to extract business name and Place ID.
+    Only accessible by Super Admins.
+    """
+    import urllib.request
+    import urllib.parse
+    import re
+
+    url = payload.url.strip()
+    if not url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La URL no puede estar vacía"
+        )
+
+    # 1. Resolve redirect if it's a short URL (maps.app.goo.gl or goo.gl/maps)
+    resolved_url = url
+    html = ""
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+            }
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            resolved_url = response.geturl()
+            html = response.read().decode('utf-8', errors='ignore')
+    except Exception as e:
+        # If fetching fails, we continue with the original URL
+        pass
+
+    # 2. Try to extract Place ID
+    place_id = None
+
+    # Search in URL (e.g. placeid=ChIJ... or /place/ChIJ...)
+    match_place_id = re.search(r'ChIJ[a-zA-Z0-9_-]{23}', resolved_url)
+    if match_place_id:
+        place_id = match_place_id.group(0)
+    elif html:
+        # Fallback to search in HTML body
+        place_ids = re.findall(r'ChIJ[a-zA-Z0-9_-]{23}', html)
+        if place_ids:
+            place_id = place_ids[0]
+
+    # 3. Extract business name
+    name = "Comercio"
+    
+    # Try parsing from URL path /maps/place/NAME/
+    match_url = re.search(r'/maps/place/([^/]+)', resolved_url)
+    if match_url:
+        name = urllib.parse.unquote(match_url.group(1)).replace('+', ' ')
+    else:
+        # Fallback: parse from HTML title
+        match_title = re.search(r'<title>(.*?)</title>', html)
+        if match_title:
+            title_text = match_title.group(1)
+            if " - Google Maps" in title_text:
+                name = title_text.split(" - Google Maps")[0]
+            else:
+                name = title_text
+
+    # Clean up coordinates, zoom level or extra search parameters from name
+    if "@" in name:
+        name = name.split("@")[0].strip()
+    if "/" in name:
+        name = name.split("/")[0].strip()
+    
+    # Clean up double spaces or trailing dashes
+    name = re.sub(r'\s+', ' ', name).strip()
+
+    return {
+        "name": name,
+        "place_id": place_id
+    }
+

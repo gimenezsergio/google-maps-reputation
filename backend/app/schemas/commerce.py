@@ -50,3 +50,13 @@ class CommerceAdminCreate(BaseModel):
     admin_username: str
     admin_password: str
 
+
+class MapsUrlParseRequest(BaseModel):
+    url: str
+
+
+class MapsUrlParseResponse(BaseModel):
+    name: str
+    place_id: Optional[str] = None
+
+
