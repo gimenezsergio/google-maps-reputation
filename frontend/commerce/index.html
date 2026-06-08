@@ -35,20 +35,21 @@
 
     <!-- Navigation Header -->
     <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 text-white font-outfit font-bold px-3 py-1.5 rounded-xl text-lg shadow-sm">RM</div>
-                <span class="font-outfit font-bold text-gray-800 tracking-tight text-lg" id="navbar-commerce-name">Cargando local...</span>
-                <span class="bg-emerald-50 text-emerald-700 text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">Local Admin</span>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                <div class="bg-indigo-600 text-white font-outfit font-bold px-2.5 py-1.5 rounded-xl text-sm sm:text-lg shadow-sm shrink-0">RM</div>
+                <span class="font-outfit font-bold text-gray-800 tracking-tight text-sm sm:text-lg truncate max-w-[100px] xs:max-w-[150px] sm:max-w-xs" id="navbar-commerce-name">Cargando local...</span>
+                <span class="bg-emerald-50 text-emerald-700 text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block shrink-0">Local Admin</span>
             </div>
-            <div class="flex items-center space-x-4">
-                <span id="user-display" class="text-xs text-gray-500 font-medium">Usuario</span>
-                <button onclick="logout()" class="text-xs text-red-500 hover:text-red-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+            <div class="flex items-center space-x-3 shrink-0">
+                <span id="user-display" class="text-xs text-gray-500 font-medium hidden sm:inline-block">Usuario</span>
+                <button onclick="logout()" class="text-2xs sm:text-xs text-red-500 hover:text-red-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition">
                     Cerrar Sesión
                 </button>
             </div>
         </div>
     </header>
+
 
     <!-- Main Dashboard -->
     <main class="max-w-7xl mx-auto px-6 py-8">
