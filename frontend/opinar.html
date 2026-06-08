@@ -50,11 +50,11 @@
         }
     </style>
 </head>
-<body class="h-screen sm:min-h-screen flex items-center justify-center sm:p-4 antialiased overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
+<body class="min-h-screen flex flex-col sm:items-center sm:justify-center sm:p-4 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
-    <div id="app" class="glass-card w-full h-full sm:h-auto sm:max-w-md rounded-none sm:rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 overflow-hidden flex flex-col transition-all duration-300">
+    <div id="app" class="glass-card w-full min-h-screen sm:min-h-0 sm:max-w-md sm:rounded-[2.5rem] shadow-2xl shadow-indigo-100/50 flex flex-col transition-all duration-300">
         
-        <!-- Header con Logo del Comercio (Fixed at top) -->
+        <!-- Header con Logo del Comercio -->
         <div class="px-6 pt-6 pb-3 sm:px-8 sm:pt-8 sm:pb-4 flex flex-col items-center border-b border-gray-100/50 shrink-0">
             <div class="relative mb-3 sm:mb-4">
                 <!-- Circular border glow effect -->
@@ -70,8 +70,8 @@
             <h1 id="commerce-name" class="font-outfit text-lg sm:text-xl font-bold text-gray-800 text-center tracking-tight leading-tight">-</h1>
         </div>
 
-        <!-- Contenedor de pantallas cargadas via main.js (Scrolls internally if too tall) -->
-        <div id="screen-container" class="flex-1 overflow-y-auto p-6 sm:p-8">
+        <!-- Contenedor de pantallas cargadas via main.js -->
+        <div id="screen-container" class="p-6 sm:p-8 flex-1">
             <div class="flex flex-col items-center py-12">
                 <div class="animate-pulse flex space-x-2">
                     <div class="h-3 w-3 bg-indigo-500 rounded-full"></div>
@@ -83,6 +83,7 @@
         </div>
         
     </div>
+
 
 
     <!-- Scripts -->
