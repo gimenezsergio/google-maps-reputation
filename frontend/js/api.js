@@ -133,6 +133,19 @@ const API = {
     },
 
     // COMMERCE ADMIN ENDPOINTS
+    async getMyCommerce(token) {
+        const response = await fetch(`${API_BASE_URL}/commerce/my-commerce`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Error al obtener detalles del comercio");
+        }
+        return response.json();
+    },
+
     async getFeedbacks(token) {
         const response = await fetch(`${API_BASE_URL}/commerce/feedbacks`, {
             headers: {

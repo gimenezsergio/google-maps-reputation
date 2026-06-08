@@ -176,9 +176,9 @@
                 const feedbacks = await API.getFeedbacks(token);
                 
                 // Get commerce details to set navbar title
-                const user = await API.getMe(token);
-                const commerce = await API.getCommerce(user.commerce_id);
+                const commerce = await API.getMyCommerce(token);
                 document.getElementById('navbar-commerce-name').innerText = commerce.name;
+
 
                 renderStats(stats);
                 renderFeedbacks(feedbacks);

@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.feedback import Feedback
 from app.models.user import User
+from app.models.commerce import Commerce
 from app.schemas.feedback import FeedbackOut
+from app.schemas.commerce import CommerceOut
 
 router = APIRouter()
 
@@ -96,3 +98,27 @@ def read_commerce_stats(
         "positive_count": positive_count,
         "tags_frequency": tags_frequency
     }
+
+
+@router.get("/my-commerce", response_model=CommerceOut)
+def read_my_commerce(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_commerce_admin)
+) -> Any:
+    """
+    Retrieve commerce profile details for the logged-in commerce owner.
+    """
+    commerce_id = current_user.commerce_id
+    if not commerce_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario no tiene un comercio asignado"
+        )
+    commerce = db.query(Commerce).filter(Commerce.id == commerce_id).first()
+    if not commerce:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comercio no encontrado"
+        )
+    return commerce
+
