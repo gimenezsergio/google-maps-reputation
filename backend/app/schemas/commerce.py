@@ -39,3 +39,14 @@ class CommercePublic(BaseModel):
     tags: List[str]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CommerceAdminCreate(BaseModel):
+    name: str
+    slug: str
+    logo_url: Optional[str] = None
+    google_place_id: str
+    tags: List[str] = []
+    admin_username: str
+    admin_password: str
+
