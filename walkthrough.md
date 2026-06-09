@@ -21,19 +21,22 @@ Para realizar las verificaciones, utiliza los siguientes accesos:
 
 Sigue estos pasos para probar todas las funcionalidades:
 
-### Paso 1: Registro del Comercio (Super Admin)
+### Paso 1: Registro del Comercio con Enlace de Google Maps (Super Admin)
 1. Abre [http://localhost:8000/login.html](http://localhost:8000/login.html) en tu navegador.
 2. Ingresa con las credenciales de Super Admin (`admin` / `admin123`).
 3. Serás redirigido al panel global de Super Admin.
-4. En el formulario de la izquierda, registra un comercio:
-   * **Nombre:** `La Querencia Parrilla`
-   * **Slug:** `la-querencia`
-   * **Google Place ID:** `ChIJN1t_tDeuEmsRUsoyG83frY4` *(Place ID de prueba)*
-   * **URL del Logotipo:** Puedes dejarlo vacío o pegar una URL de imagen pública.
-   * **Etiquetas:** `Carne tierna, Servicio rápido, Excelente ambiente, Precios justos, Mozo amable`
-   * **Usuario de Acceso:** `querencia_admin`
-   * **Contraseña de Acceso:** `querencia123`
-5. Presiona **Guardar Comercio**. Verás que aparece inmediatamente en la lista de la derecha.
+4. En el formulario de la izquierda, verás el campo **Enlace de Google Maps (Carga Automática)**.
+5. Pega un enlace de Google Maps o un enlace corto compartido (ej. `https://maps.app.goo.gl/u2g3N7yH2MvM9m8s6` o un link con formato `0x...:0x...`).
+6. Presiona **Cargar**. La aplicación resolverá el redireccionamiento, extraerá el Nombre y el Place ID (soportando tanto FIDs hexadecimales `0x...` como Place IDs estándar `ChIJ...`), y auto-completará:
+   * **Nombre Comercial** (ej. *Café de la Plaza*).
+   * **Dynamic Slug** (ej. *cafe-de-la-plaza*).
+   * **Google Place ID** (ej. *0x95bcb59b7dfb3d37:0x2c64e622ef5159b9*).
+   * **URL del Logotipo** (obtenido automáticamente de imágenes curadas de Unsplash según su categoría/rubro).
+   * **Etiquetas** por defecto.
+   * **Credenciales del local** autogeneradas de forma segura (usuario `slug_admin` y clave aleatoria fuerte).
+7. Revisa los datos (puedes editarlos en el formulario si es necesario) y haz clic en **Guardar Comercio**.
+8. Se guardará el comercio y se mostrará un modal con las credenciales generadas y un botón para **Copiar Datos** al portapapeles.
+9. El nuevo comercio se listará inmediatamente en la tabla derecha.
 
 ---
 

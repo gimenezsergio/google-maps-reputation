@@ -186,18 +186,26 @@ def parse_google_maps_url(
         # If fetching fails, we continue with the original URL
         pass
 
-    # 2. Try to extract Place ID
+    # 2. Try to extract Place ID or Hex FID
     place_id = None
 
-    # Search in URL (e.g. placeid=ChIJ... or /place/ChIJ...)
+    # Search in URL (e.g. placeid=ChIJ... or /place/ChIJ... or hex coordinates 0x...:0x...)
     match_place_id = re.search(r'ChIJ[a-zA-Z0-9_-]{23}', resolved_url)
+    match_hex_id = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', resolved_url)
+    
     if match_place_id:
         place_id = match_place_id.group(0)
+    elif match_hex_id:
+        place_id = match_hex_id.group(0)
     elif html:
         # Fallback to search in HTML body
         place_ids = re.findall(r'ChIJ[a-zA-Z0-9_-]{23}', html)
         if place_ids:
             place_id = place_ids[0]
+        else:
+            hex_ids = re.findall(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', html)
+            if hex_ids:
+                place_id = hex_ids[0]
 
     # 3. Extract business name
     name = "Comercio"
