@@ -89,3 +89,29 @@ Sigue estos pasos para probar todas las funcionalidades:
 * Las variables de entorno locales están definidas en [backend/.env](file:///home/sergio/Documents/src/google-maps-reputation/backend/.env).
 * Si deseas habilitar la generación de reseñas con DeepSeek en producción, simplemente agrega tu clave de API en la variable `DEEPSEEK_API_KEY` de ese archivo y reinicia el servidor.
 
+---
+
+## Validación de Enlaces de Google Maps (Fase 13)
+
+Hemos añadido un sistema de validación robusto en la carga automática de enlaces para evitar errores 404 al intentar dejar valoraciones en fichas inexistentes.
+
+### Comportamiento de Bloqueo
+El sistema bloqueará las siguientes URLs y retornará un error `HTTP 400 Bad Request`:
+1. **Puntos Geográficos y Coordenadas Puras**: URLs como `https://www.google.com/maps/place/-34.654877,-58.5029416` o que incluyan únicamente números decimales como nombre.
+2. **Puntos y Calles del Mapa**: URLs que no corresponden a un comercio y contienen la estructura interna de coordenadas de Google Maps (ej. `/maps/place/data=!4m2!3m1!1s...` con título genérico `"Google Maps"`).
+3. **Páginas de Búsqueda Genérica**: Enlaces donde el nombre resuelto sea `"Comercio"` o `"Google Maps"` sin una ficha de negocio asignada.
+
+### Mensaje de Error (Toast)
+Al pegar un enlace de este tipo y presionar **Cargar**, el sistema mostrará un Toast rojo en la esquina inferior derecha informando:
+> *"El enlace ingresado corresponde a un punto en el mapa o a coordenadas geográficas, no a la ficha de un comercio. Por favor, busca el comercio en Google Maps, haz clic en Compartir y copia ese enlace."*
+
+### Cómo Probarlo
+1. Ve a [http://localhost:8000/login.html](http://localhost:8000/login.html) e ingresa como Super Admin.
+2. Intenta ingresar la siguiente URL de coordenadas en el campo de Carga Automática:
+   `https://www.google.com/maps/place/data=!4m2!3m1!1s0x95bcc90090613b5b:0x2cf80e7955abf453?hl=es`
+3. Presiona **Cargar**. Deberías ver un toast rojo indicando que la URL corresponde a un punto geográfico o coordenadas.
+4. Ahora, intenta ingresar una URL comercial válida, como la de *Café de la Plaza*:
+   `https://www.google.com/maps/place/Caf%C3%A9+de+la+Plaza/@-34.5721111,-58.4556667,17z/data=!3m1!4b1!4m6!3m5!1s0x95bcb59b7dfb3d37:0x2c64e622ef5159b9!8m2!3d-34.5721111!4d-58.4556667!16s%2Fg%2F11b77m_jpy?entry=ttu`
+5. Presiona **Cargar**. Los datos de Café de la Plaza se cargarán exitosamente sin ningún error.
+
+

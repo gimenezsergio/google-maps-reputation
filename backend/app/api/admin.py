@@ -233,6 +233,32 @@ def parse_google_maps_url(
     # Clean up double spaces or trailing dashes
     name = re.sub(r'\s+', ' ', name).strip()
 
+    # VALIDATION CHECKS (Fase 13)
+    is_coords = False
+    cleaned_name = name.replace(" ", "").replace("+", "").replace("-", "").replace(",", "")
+    # If name consists purely of numbers/coordinates or maps internal data structure
+    if not name or cleaned_name.isdigit() or re.match(r'^-?\d+(?:\.\d+)?,?-?\d+(?:\.\d+)?$', name.replace(" ", "").replace("+", "")) or name.startswith("data=") or "data=!" in name:
+        is_coords = True
+
+    # Check for generic maps titles
+    is_generic_title = False
+    match_title_tag = re.search(r'<title>(.*?)</title>', html)
+    if match_title_tag:
+        title_val = match_title_tag.group(1).strip()
+        if title_val.lower() in ["google maps", "google maps - find local businesses, view maps and get driving directions in google maps."]:
+            is_generic_title = True
+
+    # If the URL resuelto points directly to coordinate data (no real business listing name)
+    if "data=!4m2!3m1!1s" in resolved_url and (name == "Comercio" or is_generic_title):
+        is_coords = True
+
+    # If coordinate or name is Comercio/Google Maps, reject it
+    if is_coords or name.lower() in ["", "comercio", "google maps", "googlemaps"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace ingresado corresponde a un punto en el mapa o a coordenadas geográficas, no a la ficha de un comercio. Por favor, busca el comercio en Google Maps, haz clic en Compartir y copia ese enlace."
+        )
+
     return {
         "name": name,
         "place_id": place_id

@@ -176,6 +176,13 @@ Para mantener el historial de Git limpio y modular, implementaremos el desarroll
   * Documentación final del README del repositorio.
 * **Commit 12:** `git commit -m "chore: despliegue, configuracion de entorno y documentacion final"`
 
+### 🔍 Fase 13: Validación Dinámica de Enlaces de Google Maps
+* **Cambios propuestos:**
+  * Implementar filtros en el backend para descartar coordenadas geográficas y ubicaciones genéricas del mapa (calles, intersecciones, etc.).
+  * Añadir comprobaciones en la URL resuelta y en el título HTML para alertar al usuario si el enlace no pertenece a un comercio real.
+  * Manejar errores de validación HTTP 400 en el frontend del Super Admin.
+* **Commit 13:** `git commit -m "feat: validacion automatica de enlaces de google maps para evitar coordenadas e intersecciones"`
+
 ---
 
 ## Open Questions
@@ -214,6 +221,14 @@ Para mantener el historial de Git limpio y modular, implementaremos el desarroll
 - Añadir una sección/tarjeta lateral permanente que renderice el código QR de opiniones de este comercio específico.
 - Implementar las funciones JavaScript para "Descargar QR (PNG)" e "Imprimir QR" (generando una vista limpia lista para impresora).
 
+### [Backend Validation & Security]
+
+#### [MODIFY] [admin.py](file:///home/sergio/Documents/src/google-maps-reputation/backend/app/api/admin.py)
+- En `/parse-maps-url`, agregar validación del nombre y URL resueltos:
+  * Si el nombre extraído es solo coordenadas (ej. `-34.654877,-58.5029416`).
+  * Si el nombre coincide con `"Comercio"`, `"Google Maps"` o está vacío, y el título de la página es el título genérico `"Google Maps"`.
+  * Retornar un error HTTP 400 con un detalle descriptivo en español: *"El enlace ingresado corresponde a un punto en el mapa o a coordenadas geográficas, no a la ficha de un comercio. Por favor, busca el comercio en Google Maps, haz clic en Compartir y copia ese enlace."*
+
 ---
 
 ## Plan de Verificación
@@ -235,3 +250,8 @@ Para garantizar que el sistema funcione perfectamente:
 3. **Detección Dinámica de Dominio:**
    * Probar el sistema en `localhost:8000` y confirmar que el QR apunta a `http://localhost:8000/...`.
    * Probar a través de una IP de red local o un túnel proxy y confirmar que el QR cambia automáticamente su contenido para apuntar a la URL correcta del dominio actual sin configuraciones adicionales.
+
+4. **Validación de Enlaces de Google Maps (Fase 13):**
+   * **Caso A (Enlace de Coordenadas):** Intentar registrar un comercio pegando un enlace de coordenadas puras (ej. `https://www.google.com/maps/place/-34.654877,-58.5029416`). Verificar que el sistema retorne un error 400 y el frontend muestre un Toast de error en color rojo con el mensaje instructivo.
+   * **Caso B (Enlace Comercial Válido):** Pegar un enlace comercial válido (ej. de *Café de la Plaza*). Verificar que pase la validación y complete los datos correctamente.
+
