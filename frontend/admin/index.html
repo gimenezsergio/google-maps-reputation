@@ -178,6 +178,8 @@
             toast.className = `fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:max-w-md z-50 flex items-start space-x-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 transform translate-y-4 opacity-0`;
             
             let iconSvg = '';
+            let timeoutDuration = 4500; // default for success
+            
             if (type === 'success') {
                 toast.className += ' bg-emerald-50/90 border-emerald-200 text-emerald-800 shadow-emerald-100/50';
                 iconSvg = `
@@ -192,6 +194,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
                 `;
+                timeoutDuration = 8000; // 8 seconds for warnings
             } else {
                 toast.className += ' bg-rose-50/90 border-rose-200 text-rose-800 shadow-rose-100/50';
                 iconSvg = `
@@ -199,11 +202,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 `;
+                timeoutDuration = 10000; // 10 seconds for errors
             }
             
             toast.innerHTML = `
                 ${iconSvg}
-                <div class="flex-1 text-sm font-medium leading-relaxed">${message}</div>
+                <div class="flex-1 text-sm font-medium leading-relaxed pr-2">${message}</div>
+                <button type="button" class="close-btn shrink-0 text-current opacity-40 hover:opacity-100 transition-opacity p-0.5 rounded-lg hover:bg-black/5 ml-auto focus:outline-none -mt-1 -mr-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
             `;
             
             document.body.appendChild(toast);
@@ -212,10 +221,17 @@
                 toast.classList.remove('translate-y-4', 'opacity-0');
             }, 50);
             
-            setTimeout(() => {
+            let autoDismissTimer;
+            
+            const dismiss = () => {
+                clearTimeout(autoDismissTimer);
                 toast.classList.add('translate-y-4', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
-            }, 4500);
+            };
+            
+            toast.querySelector('.close-btn').addEventListener('click', dismiss);
+            
+            autoDismissTimer = setTimeout(dismiss, timeoutDuration);
         }
 
         function generateSlug(text) {
