@@ -175,23 +175,47 @@
 
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
-            toast.className = `fixed bottom-5 right-5 px-5 py-3.5 rounded-2xl text-xs font-semibold shadow-2xl border z-50 transition-all duration-300 transform translate-y-10 opacity-0 flex items-center space-x-2`;
+            toast.className = `fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:max-w-md z-50 flex items-start space-x-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 transform translate-y-4 opacity-0`;
+            
+            let iconSvg = '';
             if (type === 'success') {
-                toast.className += ' bg-emerald-50 border-emerald-100 text-emerald-700';
+                toast.className += ' bg-emerald-50/90 border-emerald-200 text-emerald-800 shadow-emerald-100/50';
+                iconSvg = `
+                    <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
             } else if (type === 'warning') {
-                toast.className += ' bg-amber-50 border-amber-100 text-amber-700';
+                toast.className += ' bg-amber-50/90 border-amber-200 text-amber-800 shadow-amber-100/50';
+                iconSvg = `
+                    <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                `;
             } else {
-                toast.className += ' bg-rose-50 border-rose-100 text-rose-700';
+                toast.className += ' bg-rose-50/90 border-rose-200 text-rose-800 shadow-rose-100/50';
+                iconSvg = `
+                    <svg class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
             }
-            toast.innerText = message;
+            
+            toast.innerHTML = `
+                ${iconSvg}
+                <div class="flex-1 text-sm font-medium leading-relaxed">${message}</div>
+            `;
+            
             document.body.appendChild(toast);
+            
             setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
+                toast.classList.remove('translate-y-4', 'opacity-0');
             }, 50);
+            
             setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
+                toast.classList.add('translate-y-4', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
-            }, 3500);
+            }, 4500);
         }
 
         function generateSlug(text) {
