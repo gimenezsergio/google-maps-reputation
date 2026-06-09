@@ -257,7 +257,10 @@ window.copyAndRedirect = (text) => {
     
     setTimeout(() => {
         const placeId = state.commerce.google_place_id;
-        window.open(`https://search.google.com/local/writereview?placeid=${placeId}`, '_blank');
+        const reviewUrl = placeId && placeId.startsWith('0x') 
+            ? `https://search.google.com/local/writereview?fid=${placeId}`
+            : `https://search.google.com/local/writereview?placeid=${placeId}`;
+        window.open(reviewUrl, '_blank');
         state.step = 'gracias';
         render();
     }, 1200);

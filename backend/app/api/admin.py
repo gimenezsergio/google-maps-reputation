@@ -11,7 +11,8 @@ from app.schemas.commerce import (
     CommerceAdminCreate, 
     CommerceUpdate,
     MapsUrlParseRequest,
-    MapsUrlParseResponse
+    MapsUrlParseResponse,
+    MapsSearchResponse
 )
 
 router = APIRouter()
@@ -228,4 +229,71 @@ def parse_google_maps_url(
         "name": name,
         "place_id": place_id
     }
+
+
+@router.get("/search-places", response_model=List[MapsSearchResponse])
+def search_places_on_google(
+    q: str,
+    current_super_admin: User = Depends(deps.get_current_super_admin)
+) -> Any:
+    """
+    Search for places/businesses on Google Maps without an API key.
+    Only accessible by Super Admins.
+    """
+    import urllib.request
+    import urllib.parse
+    import json
+    import re
+
+    query = q.strip()
+    if not query:
+        return []
+
+    url = f"https://www.google.com/search?tbm=map&authuser=0&hl=es&gl=ar&q={urllib.parse.quote(query)}"
+    req = urllib.request.Request(
+        url, 
+        headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Cookie': 'CONSENT=YES+cb.20210328-17-p0.es+FX+999'
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            body = response.read().decode('utf-8', errors='ignore')
+        
+        if body.startswith(")]}'"):
+            json_text = body[4:].strip()
+        else:
+            json_text = body.strip()
+
+        data = json.loads(json_text)
+        results = []
+        
+        def extract_listings(item):
+            if isinstance(item, list):
+                if len(item) >= 3 and isinstance(item[0], int) and isinstance(item[1], str) and isinstance(item[2], list):
+                    sublist = item[2][0]
+                    if isinstance(sublist, list) and len(sublist) >= 3:
+                        hex_id = sublist[2]
+                        if isinstance(hex_id, str) and re.match(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', hex_id):
+                            parts = item[1].split(',')
+                            name = parts[0].strip()
+                            address = ",".join(parts[1:]).strip() if len(parts) > 1 else "Google Maps"
+                            
+                            if not any(r['google_place_id'] == hex_id for r in results):
+                                results.append({
+                                    "name": name,
+                                    "address": address,
+                                    "google_place_id": hex_id
+                                })
+                for sub in item:
+                    extract_listings(sub)
+                    
+        extract_listings(data)
+        return results
+    except Exception as e:
+        return []
+
 

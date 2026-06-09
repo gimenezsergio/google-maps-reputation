@@ -64,14 +64,17 @@
                         <input type="hidden" id="edit-id">
                         <input type="hidden" id="slug">
 
-                        <!-- Google Maps URL Link Parsing -->
-                        <div id="maps-url-section">
-                            <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Enlace de Google Maps (Carga Automática)</label>
+                        <!-- Google Maps Search Autocomplete -->
+                        <div id="maps-search-section" class="relative">
+                            <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Buscar Comercio en Google Maps</label>
                             <div class="relative">
-                                <input type="url" id="maps-url" class="w-full pl-3 pr-20 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Pega el link de Google Maps...">
-                                <button type="button" id="parse-url-btn" onclick="handleParseUrl()" class="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-lg text-3xs transition">
-                                    Cargar
-                                </button>
+                                <input type="text" id="maps-search-input" class="w-full pl-3 pr-10 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Ej. Cafe de la Plaza Devoto..." oninput="handleSearchInput(event)">
+                                <div class="absolute right-3 top-3.5 flex items-center pointer-events-none">
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                </div>
+                            </div>
+                            <div id="search-suggestions" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto hidden">
+                                <!-- suggestions loaded dynamically -->
                             </div>
                         </div>
                         
@@ -206,49 +209,174 @@
                 .replace(/-+$/, '');
         }
 
-        async function handleParseUrl() {
-            const urlInput = document.getElementById('maps-url');
-            const url = urlInput.value.trim();
-            if (!url) {
-                showToast("Por favor, ingresa una URL de Google Maps", "error");
+        let searchTimeout = null;
+        let lastGeneratedCredentials = null;
+
+        function getWriteReviewUrl(placeId) {
+            if (placeId && placeId.startsWith('0x')) {
+                return `https://search.google.com/local/writereview?fid=${placeId}`;
+            }
+            return `https://search.google.com/local/writereview?placeid=${placeId}`;
+        }
+
+        function handleSearchInput(event) {
+            const query = event.target.value.trim();
+            const suggestionsContainer = document.getElementById('search-suggestions');
+            
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            if (query.length < 3) {
+                suggestionsContainer.classList.add('hidden');
+                suggestionsContainer.innerHTML = '';
                 return;
             }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const results = await API.searchPlaces(token, query);
+                    
+                    if (results && results.length > 0) {
+                        suggestionsContainer.innerHTML = results.map(place => {
+                            const escapedPlace = JSON.stringify(place).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                            return `
+                                <div onclick="selectPlace(${escapedPlace})" class="p-3 hover:bg-indigo-50/50 cursor-pointer border-b border-gray-100 last:border-b-0 transition flex flex-col">
+                                    <span class="font-semibold text-xs text-gray-800">${place.name}</span>
+                                    <span class="text-3xs text-gray-400 mt-0.5 truncate">${place.address}</span>
+                                </div>
+                            `;
+                        }).join('');
+                        suggestionsContainer.classList.remove('hidden');
+                    } else {
+                        suggestionsContainer.innerHTML = `
+                            <div class="p-4 text-center text-xs text-gray-400 italic">No se encontraron resultados en Google Maps</div>
+                        `;
+                        suggestionsContainer.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    suggestionsContainer.innerHTML = `
+                        <div class="p-4 text-center text-xs text-rose-500 font-semibold">Error al buscar: ${err.message}</div>
+                    `;
+                    suggestionsContainer.classList.remove('hidden');
+                }
+            }, 400);
+        }
 
-            const btn = document.getElementById('parse-url-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "Cargando...";
-            btn.disabled = true;
+        function selectPlace(place) {
+            document.getElementById('name').value = place.name;
+            document.getElementById('google-place-id').value = place.google_place_id;
+            
+            const slug = generateSlug(place.name);
+            document.getElementById('slug').value = slug;
+            document.getElementById('logo-url').value = getSampleLogoUrl(place.name);
+            document.getElementById('tags').value = "Excelente atención, Rápido servicio, Muy limpio, Precios acordes";
+            
+            const adminUsername = `${slug}_admin`;
+            const adminPassword = generateRandomPassword(slug);
+            
+            document.getElementById('admin-username').value = adminUsername;
+            document.getElementById('admin-password').value = adminPassword;
+            
+            document.getElementById('maps-search-input').value = place.name;
+            document.getElementById('search-suggestions').classList.add('hidden');
+            
+            showToast("Comercio seleccionado. Datos y credenciales completados.", "success");
+        }
+
+        function getSampleLogoUrl(name) {
+            const n = name.toLowerCase();
+            if (n.includes('pizza') || n.includes('pizzeria')) {
+                return 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200&h=200&fit=crop';
+            }
+            if (n.includes('cafe') || n.includes('coffee') || n.includes('cafeteria')) {
+                return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&h=200&fit=crop';
+            }
+            if (n.includes('burger') || n.includes('hamburguesa') || n.includes('hamburgueseria')) {
+                return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&h=200&fit=crop';
+            }
+            if (n.includes('helado') || n.includes('ice cream') || n.includes('heladeria')) {
+                return 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?w=200&h=200&fit=crop';
+            }
+            if (n.includes('sushi') || n.includes('sushibar')) {
+                return 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=200&h=200&fit=crop';
+            }
+            if (n.includes('cerveza') || n.includes('bar') || n.includes('beer') || n.includes('pub')) {
+                return 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=200&h=200&fit=crop';
+            }
+            return 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&h=200&fit=crop';
+        }
+
+        function generateRandomPassword(slug) {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let rand = '';
+            for (let i = 0; i < 4; i++) {
+                rand += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const cleanPrefix = slug.substring(0, 10).replace(/[^a-zA-Z]/g, '');
+            const capitalized = cleanPrefix.charAt(0).toUpperCase() + cleanPrefix.slice(1);
+            return `${capitalized || 'Pass'}${rand}!`;
+        }
+
+        function showCredentialsModal(commerceName, username, password) {
+            const modal = document.getElementById('credentials-modal');
+            const content = document.getElementById('credentials-modal-content');
+            
+            document.getElementById('modal-commerce-name').innerText = commerceName;
+            document.getElementById('modal-username').innerText = username;
+            document.getElementById('modal-password').innerText = password;
+            
+            const loginUrl = `${window.location.protocol}//${window.location.host}/login.html`;
+            const linkElem = document.getElementById('modal-login-link');
+            linkElem.innerText = loginUrl;
+            linkElem.href = loginUrl;
+            
+            lastGeneratedCredentials = {
+                name: commerceName,
+                username: username,
+                password: password,
+                link: loginUrl
+            };
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+            }, 50);
+        }
+
+        function closeCredentialsModal() {
+            const modal = document.getElementById('credentials-modal');
+            const content = document.getElementById('credentials-modal-content');
+            
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        async function copyGeneratedCredentials() {
+            if (!lastGeneratedCredentials) return;
+            const textToCopy = `Acceso al Panel de ${lastGeneratedCredentials.name}:
+Usuario: ${lastGeneratedCredentials.username}
+Contraseña: ${lastGeneratedCredentials.password}
+Link de Login: ${lastGeneratedCredentials.link}`;
 
             try {
-                const res = await API.parseMapsUrl(token, url);
-                
-                // Update Name
-                const nameInput = document.getElementById('name');
-                nameInput.value = res.name;
-                
-                // Update Slug hidden input
-                const slugInput = document.getElementById('slug');
-                slugInput.value = generateSlug(res.name);
-
-                // Update Place ID if found
-                const placeIdInput = document.getElementById('google-place-id');
-                if (res.place_id) {
-                    placeIdInput.value = res.place_id;
-                    showToast("Datos cargados correctamente de Google Maps", "success");
-                } else {
-                    placeIdInput.value = "";
-                    showToast("Nombre cargado. Completa el Place ID usando el buscador de arriba.", "warning");
-                }
-                
-                // Clear the URL input to keep it clean
-                urlInput.value = "";
+                await navigator.clipboard.writeText(textToCopy);
+                showToast("¡Credenciales copiadas al portapapeles!", "success");
             } catch (err) {
-                showToast("Error al cargar la URL: " + err.message, "error");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
+                showToast("Error al copiar, por favor copialas manualmente", "error");
             }
         }
+
+        // Close search suggestions on click outside
+        document.addEventListener('click', (e) => {
+            const searchSection = document.getElementById('maps-search-section');
+            const suggestions = document.getElementById('search-suggestions');
+            if (searchSection && !searchSection.contains(e.target)) {
+                suggestions.classList.add('hidden');
+            }
+        });
 
         document.addEventListener("DOMContentLoaded", async () => {
             // Bind slug generator to name input
@@ -314,7 +442,7 @@
                             <a href="/opinar.html?slug=${c.slug}" target="_blank" class="hover:underline">${c.slug} ↗</a>
                         </td>
                         <td class="py-4 px-4 text-2xs text-gray-400">
-                            <a href="https://search.google.com/local/writereview?placeid=${c.google_place_id}" target="_blank" class="hover:underline text-blue-500 font-medium">Ver Maps ↗</a>
+                            <a href="${getWriteReviewUrl(c.google_place_id)}" target="_blank" class="hover:underline text-blue-500 font-medium">Ver Maps ↗</a>
                         </td>
                         <td class="py-4 px-4">
                             <span class="px-2.5 py-1 rounded-full text-3xs font-semibold ${c.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}">
@@ -359,7 +487,7 @@
                             </div>
                             <div>
                                 <span class="block text-3xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Google Maps</span>
-                                <a href="https://search.google.com/local/writereview?placeid=${c.google_place_id}" target="_blank" class="hover:underline text-blue-500 font-semibold block truncate">Ver Maps ↗</a>
+                                <a href="${getWriteReviewUrl(c.google_place_id)}" target="_blank" class="hover:underline text-blue-500 font-semibold block truncate">Ver Maps ↗</a>
                             </div>
                         </div>
                         
@@ -398,15 +526,20 @@
                     const is_active = document.getElementById('is-active').checked;
                     await API.updateCommerce(token, editId, { name, slug, logo_url, google_place_id, tags, is_active });
                     showToast("Comercio actualizado con éxito", "success");
+                    resetForm();
                 } else {
                     // CREATE MODE
                     const admin_username = document.getElementById('admin-username').value;
                     const admin_password = document.getElementById('admin-password').value;
                     await API.createCommerce(token, { name, slug, logo_url, google_place_id, tags, admin_username, admin_password });
                     showToast("Comercio y usuario administrador creados con éxito", "success");
+                    
+                    // Show credentials modal
+                    showCredentialsModal(name, admin_username, admin_password);
+                    
+                    resetForm();
                 }
                 
-                resetForm();
                 loadCommerces();
             } catch (err) {
                 showToast("Error: " + err.message, "error");
@@ -424,8 +557,8 @@
             document.getElementById('logo-url').value = c.logo_url || '';
             document.getElementById('tags').value = c.tags ? c.tags.join(', ') : '';
 
-            // Hide maps-url loader section in edit mode
-            document.getElementById('maps-url-section').classList.add('hidden');
+            // Hide maps-search-section in edit mode
+            document.getElementById('maps-search-section').classList.add('hidden');
 
             // Hide admin credentials (edit route doesn't update password)
             document.getElementById('credentials-section').classList.add('hidden');
@@ -460,9 +593,11 @@
             document.getElementById('logo-url').value = '';
             document.getElementById('tags').value = '';
             
-            // Show maps-url loader section again and clear input
-            document.getElementById('maps-url-section').classList.remove('hidden');
-            document.getElementById('maps-url').value = '';
+            // Show maps-search-section again and clear input
+            document.getElementById('maps-search-section').classList.remove('hidden');
+            document.getElementById('maps-search-input').value = '';
+            document.getElementById('search-suggestions').classList.add('hidden');
+            document.getElementById('search-suggestions').innerHTML = '';
 
             // Show admin credentials again
             document.getElementById('credentials-section').classList.remove('hidden');
@@ -484,5 +619,49 @@
             window.location.href = '/login.html';
         }
     </script>
+
+    <!-- Credentials Modal (visible after successful registration) -->
+    <div id="credentials-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-100 transform scale-95 opacity-0 transition-all duration-300" id="credentials-modal-content">
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="bg-emerald-100 text-emerald-600 p-2.5 rounded-2xl">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-outfit font-bold text-gray-800 text-lg">¡Comercio Registrado!</h3>
+                    <p class="text-3xs text-gray-400 uppercase font-bold tracking-wider">Credenciales de acceso generadas</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                <div>
+                    <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Nombre Comercial</span>
+                    <span id="modal-commerce-name" class="text-xs font-semibold text-gray-800"></span>
+                </div>
+                <div>
+                    <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Usuario de Acceso</span>
+                    <span id="modal-username" class="text-xs font-mono text-indigo-600 font-semibold bg-white px-2.5 py-1 rounded-lg border border-gray-100 inline-block"></span>
+                </div>
+                <div>
+                    <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Contraseña</span>
+                    <span id="modal-password" class="text-xs font-mono text-indigo-600 font-semibold bg-white px-2.5 py-1 rounded-lg border border-gray-100 inline-block"></span>
+                </div>
+                <div>
+                    <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Link de Acceso</span>
+                    <a id="modal-login-link" href="/login.html" target="_blank" class="text-xs text-blue-500 hover:underline font-semibold block truncate"></a>
+                </div>
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="copyGeneratedCredentials()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    <span>Copiar Datos</span>
+                </button>
+                <button onclick="closeCredentialsModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-6 rounded-xl text-xs transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

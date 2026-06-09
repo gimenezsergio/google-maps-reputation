@@ -148,6 +148,18 @@ const API = {
         return response.json();
     },
 
+    async searchPlaces(token, q) {
+        const response = await fetch(`${API_BASE_URL}/admin/search-places?q=${encodeURIComponent(q)}`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error("Error al buscar comercios en Google Maps");
+        }
+        return response.json();
+    },
+
     // COMMERCE ADMIN ENDPOINTS
     async getMyCommerce(token) {
         const response = await fetch(`${API_BASE_URL}/commerce/my-commerce`, {

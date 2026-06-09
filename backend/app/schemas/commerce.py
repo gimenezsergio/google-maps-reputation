@@ -60,3 +60,10 @@ class MapsUrlParseResponse(BaseModel):
     place_id: Optional[str] = None
 
 
+class MapsSearchResponse(BaseModel):
+    name: str
+    address: str
+    google_place_id: str
+
+
+
