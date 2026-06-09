@@ -72,7 +72,20 @@ Sigue estos pasos para probar todas las funcionalidades:
 
 ---
 
+### Paso 5: Generación y Uso de Códigos QR (Dinámicos)
+1. **En el panel de Super Admin**:
+   * Al crear un nuevo comercio, verás el código QR público renderizado dinámicamente en el modal de éxito junto con las credenciales.
+   * En la lista de comercios registrados, haz clic en el botón **Ver QR** de cualquier local.
+   * Se abrirá un modal premium que muestra el QR. Prueba el botón **Descargar** para bajar el archivo PNG o **Imprimir** para generar una página limpia lista para impresión.
+2. **En el panel de Comercio (Dueño)**:
+   * Inicia sesión con la cuenta de un local (ej. `querencia_admin`).
+   * En la barra de navegación superior, haz clic en el botón **Ver QR**.
+   * Se abrirá el modal con el QR de tu local, apuntando automáticamente al dominio actual de tu despliegue. También puedes descargarlo o imprimirlo desde aquí.
+
+---
+
 ## Archivos de Configuración del Servidor
 
 * Las variables de entorno locales están definidas en [backend/.env](file:///home/sergio/Documents/src/google-maps-reputation/backend/.env).
 * Si deseas habilitar la generación de reseñas con DeepSeek en producción, simplemente agrega tu clave de API en la variable `DEEPSEEK_API_KEY` de ese archivo y reinicia el servidor.
+

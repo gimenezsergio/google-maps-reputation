@@ -22,6 +22,7 @@
             }
         }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-gray-50/50 min-h-screen font-sans antialiased text-gray-800">
 
@@ -305,7 +306,7 @@
             return `${capitalized || 'Pass'}${rand}!`;
         }
 
-        function showCredentialsModal(commerceName, username, password) {
+        function showCredentialsModal(commerceName, username, password, slug) {
             const modal = document.getElementById('credentials-modal');
             const content = document.getElementById('credentials-modal-content');
             
@@ -318,6 +319,19 @@
             linkElem.innerText = loginUrl;
             linkElem.href = loginUrl;
             
+            // Generate QR Code dynamically
+            const qrContainer = document.getElementById('modal-creds-qrcode');
+            qrContainer.innerHTML = '';
+            const opinionUrl = `${window.location.protocol}//${window.location.host}/opinar.html?slug=${slug}`;
+            new QRCode(qrContainer, {
+                text: opinionUrl,
+                width: 128,
+                height: 128,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
             lastGeneratedCredentials = {
                 name: commerceName,
                 username: username,
@@ -329,6 +343,144 @@
             setTimeout(() => {
                 content.classList.remove('scale-95', 'opacity-0');
             }, 50);
+        }
+
+        let activeQRData = null;
+
+        function showQR(name, slug) {
+            const modal = document.getElementById('qr-modal');
+            const content = document.getElementById('qr-modal-content');
+            
+            document.getElementById('qr-modal-title').innerText = name;
+            
+            const opinionUrl = `${window.location.protocol}//${window.location.host}/opinar.html?slug=${slug}`;
+            document.getElementById('qr-modal-link-text').innerText = opinionUrl;
+            
+            const qrContainer = document.getElementById('modal-qrcode');
+            qrContainer.innerHTML = '';
+            
+            new QRCode(qrContainer, {
+                text: opinionUrl,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            activeQRData = {
+                name: name,
+                slug: slug,
+                url: opinionUrl
+            };
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+            }, 50);
+        }
+
+        function closeQRModal() {
+            const modal = document.getElementById('qr-modal');
+            const content = document.getElementById('qr-modal-content');
+            
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function downloadQR() {
+            if (!activeQRData) return;
+            const qrContainer = document.getElementById('modal-qrcode');
+            const canvas = qrContainer.querySelector('canvas');
+            const img = qrContainer.querySelector('img');
+            
+            let imgUrl = "";
+            if (canvas) {
+                imgUrl = canvas.toDataURL("image/png");
+            } else if (img) {
+                imgUrl = img.src;
+            }
+            
+            if (!imgUrl) {
+                showToast("No se pudo generar la imagen para descargar", "error");
+                return;
+            }
+            
+            const link = document.createElement("a");
+            link.href = imgUrl;
+            link.download = `qr_${activeQRData.slug}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Código QR descargado con éxito");
+        }
+
+        function printQR() {
+            if (!activeQRData) return;
+            const qrContainer = document.getElementById('modal-qrcode');
+            const canvas = qrContainer.querySelector('canvas');
+            const img = qrContainer.querySelector('img');
+            
+            let imgUrl = "";
+            if (canvas) {
+                imgUrl = canvas.toDataURL("image/png");
+            } else if (img) {
+                imgUrl = img.src;
+            }
+            
+            if (!imgUrl) {
+                showToast("No se pudo generar la imagen para imprimir", "error");
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Imprimir QR - ${activeQRData.name}</title>
+                    <style>
+                        body {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            margin: 0;
+                            font-family: sans-serif;
+                        }
+                        img {
+                            width: 350px;
+                            height: 350px;
+                            margin-bottom: 20px;
+                        }
+                        h1 {
+                            font-size: 24px;
+                            color: #333;
+                            margin: 0;
+                        }
+                        p {
+                            font-size: 14px;
+                            color: #666;
+                            margin-top: 5px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${activeQRData.name}</h1>
+                    <p>Escanea para dejar tu opinión</p>
+                    <img src="${imgUrl}" />
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.onafterprint = function() { window.close(); };
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         }
 
         function closeCredentialsModal() {
@@ -430,6 +582,9 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                             </span>
                         </td>
                         <td class="py-4 pl-4 text-right space-x-1.5">
+                            <button onclick="showQR('${c.name.replace(/'/g, "\\'")}', '${c.slug}')" class="text-emerald-600 hover:text-emerald-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 transition text-2xs">
+                                Ver QR
+                            </button>
                             <button onclick="editCommerce(${c.id})" class="text-indigo-600 hover:text-indigo-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition text-2xs">
                                 Editar
                             </button>
@@ -472,6 +627,9 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                         </div>
                         
                         <div class="flex justify-end space-x-2 pt-1">
+                            <button onclick="showQR('${c.name.replace(/'/g, "\\'")}', '${c.slug}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-semibold px-3 py-2 rounded-xl transition text-2xs">
+                                Ver QR
+                            </button>
                             <button onclick="editCommerce(${c.id})" class="flex-1 text-center bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold py-2 rounded-xl transition text-2xs">
                                 Editar
                             </button>
@@ -515,7 +673,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                     showToast("Comercio y usuario administrador creados con éxito", "success");
                     
                     // Show credentials modal
-                    showCredentialsModal(name, admin_username, admin_password);
+                    showCredentialsModal(name, admin_username, admin_password, slug);
                     
                     resetForm();
                 }
@@ -628,6 +786,10 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                     <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Link de Acceso</span>
                     <a id="modal-login-link" href="/login.html" target="_blank" class="text-xs text-blue-500 hover:underline font-semibold block truncate"></a>
                 </div>
+                <div class="border-t border-gray-100/60 pt-4 flex flex-col items-center">
+                    <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center w-full">Código QR Público</span>
+                    <div id="modal-creds-qrcode" class="bg-white p-2 rounded-xl border border-gray-100 shadow-sm flex items-center justify-center"></div>
+                </div>
             </div>
 
             <div class="mt-6 flex space-x-2">
@@ -636,6 +798,40 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                     <span>Copiar Datos</span>
                 </button>
                 <button onclick="closeCredentialsModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-6 rounded-xl text-xs transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Modal -->
+    <div id="qr-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-gray-100 transform scale-95 opacity-0 transition-all duration-300" id="qr-modal-content">
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="bg-indigo-100 text-indigo-600 p-2.5 rounded-2xl">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-outfit font-bold text-gray-800 text-lg" id="qr-modal-title">Código QR</h3>
+                    <p class="text-3xs text-gray-400 uppercase font-bold tracking-wider">Escaneo directo para opinar</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                <div id="modal-qrcode" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-center"></div>
+                <p id="qr-modal-link-text" class="text-4xs text-gray-400 font-mono mt-4 truncate max-w-full text-center"></p>
+            </div>
+
+            <div class="mt-6 flex space-x-2">
+                <button onclick="downloadQR()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Descargar</span>
+                </button>
+                <button onclick="printQR()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-3a2 2 0 00-2-2H9a2 2 0 00-2 2v3a2 2 0 002 2zm5-14V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                    <span>Imprimir</span>
+                </button>
+                <button onclick="closeQRModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition">
                     Cerrar
                 </button>
             </div>

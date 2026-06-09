@@ -1,4 +1,4 @@
-# Plan de Implementación: Google Maps Reputation Manager
+# Plan de Implementación: Google Maps Reputation Manager (Módulo QR)
 
 Este plan describe la arquitectura y los pasos para convertir el mockup `reputation_manager.html` en un producto SaaS profesional y mantenible.
 
@@ -163,6 +163,57 @@ Para mantener el historial de Git limpio y modular, implementaremos el desarroll
   * Realizar pruebas de extremo a extremo (registro de comercio, simulación de escaneo QR, envío de feedback negativo, generación de reseñas DeepSeek exitosa).
 * **Commit 10:** `git commit -m "design: pulido final estetico, transiciones y validacion general de UI/UX"`
 
+### 📦 Fase 11: Implementación de Módulo QR Dinámico
+* **Cambios propuestos:**
+  * Integración de `qrcode.js` para generación dinámica de códigos QR en los paneles.
+  * Funcionalidades de descarga e impresión de códigos QR para comercios.
+* **Commit 11:** `git commit -m "feat: integracion de generacion y gestion de codigos QR dinamicos"`
+
+### 🚀 Fase 12: Despliegue y Documentación
+* **Cambios propuestos:**
+  * Configuración de variables de entorno para producción.
+  * Guía de despliegue en servidor (Systemd + Gunicorn/Uvicorn o Docker).
+  * Documentación final del README del repositorio.
+* **Commit 12:** `git commit -m "chore: despliegue, configuracion de entorno y documentacion final"`
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> Por favor revisa y responde a las siguientes preguntas en tu próxima respuesta para adaptar los detalles de la implementación a tu gusto:
+>
+> 1. **¿Qué biblioteca de QR prefieres usar?**
+>    - *(Recomendado)* **QRCode.js via CDN**: Es autónoma, ligera, muy fácil de integrar y funciona 100% en el navegador (generando Canvas o SVG), lo que permite descargar el QR como PNG o imprimirlo directamente sin consumir recursos del backend.
+>    - **Generación en Backend (Python `qrcode` + `Pillow`)**: Requiere instalar librerías en Python y servir las imágenes dinámicamente desde el backend.
+> 2. **Ubicación y Diseño en los Dashboards**:
+>    - **En el panel de Super Admin**:
+>      * Añadiremos una columna de "Acciones / QR" en la lista de comercios con un botón/icono de QR. Al hacer clic, se abrirá un modal premium interactivo que mostrará el QR con opciones para "Descargar PNG" e "Imprimir".
+>      * También colocaremos el QR generado directamente en el modal de éxito cuando se crea un nuevo comercio, facilitando la copia de credenciales y la descarga del QR al mismo tiempo.
+>    - **En el panel de Comercio (Dueño)**:
+>      * Crearemos una tarjeta lateral (debajo de la distribución de estrellas) que muestre de forma permanente el QR listo para ser escaneado por los clientes, con botones de "Descargar QR" e "Imprimir QR".
+>      * ¿Te parece correcta esta distribución, o preferirías que estuviera en otra sección del panel?
+> 3. **Diseño del QR**:
+>    - Proponemos un estilo clásico en blanco y negro de alta resolución para garantizar la máxima compatibilidad de lectura con cualquier cámara de smartphone. ¿Deseas algún tipo de personalización estética adicional (ej. cambiar colores, esquinas redondeadas)?
+
+---
+
+## Proposed Changes
+
+### [Frontend Components]
+
+#### [MODIFY] [index.html](file:///home/sergio/Documents/src/google-maps-reputation/frontend/admin/index.html)
+- Cargar la librería de QR (ej. `qrcode.js`) desde CDN.
+- Agregar icono/botón de QR en la lista de comercios (Desktop y Mobile).
+- Crear un modal interactivo para visualizar, descargar como PNG e imprimir el QR de cualquier comercio seleccionado.
+- Integrar la visualización del código QR en el modal de éxito de registro de comercio.
+- Asegurar que la URL del QR se construya dinámicamente usando `window.location.origin` para que sea compatible con cualquier dominio de despliegue.
+
+#### [MODIFY] [index.html](file:///home/sergio/Documents/src/google-maps-reputation/frontend/commerce/index.html)
+- Cargar la librería de QR desde CDN.
+- Añadir una sección/tarjeta lateral permanente que renderice el código QR de opiniones de este comercio específico.
+- Implementar las funciones JavaScript para "Descargar QR (PNG)" e "Imprimir QR" (generando una vista limpia lista para impresora).
+
 ---
 
 ## Plan de Verificación
@@ -175,6 +226,12 @@ Para garantizar que el sistema funcione perfectamente:
    * **Caso C (Paneles Administrativos):**
      * Loguearse como Super Admin, crear un comercio de prueba, definir sus tags, verificar su almacenamiento en la DB SQLite.
      * Loguearse como el administrador de ese comercio de prueba, verificar que se visualice la queja del Caso B y las métricas actualizadas de satisfacción.
+   * **Caso D (Generación en Admin):** Loguearse como Super Admin, crear un comercio y verificar que el QR aparezca en el modal de éxito. Probar descargarlo como PNG y escanearlo con un teléfono celular (debe apuntar a `https://<dominio>/opinar.html?slug=<slug>`).
+   * **Caso E (Modal en Lista de Admin):** Hacer clic en el icono de QR en la lista de comercios registrados del Super Admin, verificar que abra el modal interactivo con el QR del comercio respectivo y que los botones de descarga y de impresión funcionen.
+   * **Caso F (Panel de Comercio):** Loguearse con la cuenta de un comercio (ej. `cafe_admin`), verificar que en la barra lateral se renderice correctamente el QR del local actual, probar descargarlo en alta calidad e imprimirlo.
 2. **Seguridad de API:**
    * Validar que los endpoints protegidos bajo `/api/v1/admin/*` y `/api/v1/commerce/*` denieguen el acceso si no se provee un token JWT válido o si el rol no coincide.
    * Verificar que la API de DeepSeek solo sea accesible a través del backend.
+3. **Detección Dinámica de Dominio:**
+   * Probar el sistema en `localhost:8000` y confirmar que el QR apunta a `http://localhost:8000/...`.
+   * Probar a través de una IP de red local o un túnel proxy y confirmar que el QR cambia automáticamente su contenido para apuntar a la URL correcta del dominio actual sin configuraciones adicionales.
