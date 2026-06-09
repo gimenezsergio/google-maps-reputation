@@ -1,5 +1,25 @@
+// Resolve the app base path so the frontend works both at / and under a subroute.
+const APP_BASE_PATH = (() => {
+    const path = window.location.pathname;
+    const markers = ["/admin/", "/commerce/", "/login.html", "/opinar.html"];
+
+    for (const marker of markers) {
+        const idx = path.indexOf(marker);
+        if (idx !== -1) {
+            return `${path.slice(0, idx)}/`;
+        }
+    }
+
+    const lastSlash = path.lastIndexOf("/");
+    return lastSlash >= 0 ? path.slice(0, lastSlash + 1) : "/";
+})();
+
+function appUrl(relativePath = "") {
+    return new URL(relativePath, `${window.location.origin}${APP_BASE_PATH}`).toString();
+}
+
 // Client API configuration
-const API_BASE_URL = "/api/v1";
+const API_BASE_URL = appUrl("api/v1").replace(/\/$/, "");
 
 const API = {
     // PUBLIC API ENDPOINTS
@@ -200,3 +220,5 @@ const API = {
 };
 
 window.API = API;
+window.APP_BASE_PATH = APP_BASE_PATH;
+window.appUrl = appUrl;

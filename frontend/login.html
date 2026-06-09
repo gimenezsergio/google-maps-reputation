@@ -67,7 +67,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/js/api.js"></script>
+    <script src="js/api.js"></script>
 
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -91,9 +91,9 @@
                 
                 // Redirect based on role
                 if (user.role === 'super_admin') {
-                    window.location.href = '/admin/index.html';
+                    window.location.href = appUrl('admin/index.html');
                 } else if (user.role === 'commerce_admin') {
-                    window.location.href = '/commerce/index.html';
+                    window.location.href = appUrl('commerce/index.html');
                 } else {
                     throw new Error("Rol de usuario desconocido");
                 }

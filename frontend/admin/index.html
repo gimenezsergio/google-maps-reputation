@@ -30,7 +30,7 @@
     <script>
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/login.html';
+            window.location.href = appUrl('login.html');
         }
     </script>
 
@@ -165,7 +165,7 @@
     </main>
 
     <!-- Scripts -->
-    <script src="/js/api.js?v=2"></script>
+    <script src="../js/api.js?v=2"></script>
 
     <script>
         let commerces = [];
@@ -350,7 +350,7 @@
             document.getElementById('modal-username').innerText = username;
             document.getElementById('modal-password').innerText = password;
             
-            const loginUrl = `${window.location.protocol}//${window.location.host}/login.html`;
+            const loginUrl = appUrl('login.html');
             const linkElem = document.getElementById('modal-login-link');
             linkElem.innerText = loginUrl;
             linkElem.href = loginUrl;
@@ -358,7 +358,7 @@
             // Generate QR Code dynamically
             const qrContainer = document.getElementById('modal-creds-qrcode');
             qrContainer.innerHTML = '';
-            const opinionUrl = `${window.location.protocol}//${window.location.host}/opinar.html?slug=${slug}`;
+            const opinionUrl = appUrl(`opinar.html?slug=${slug}`);
             new QRCode(qrContainer, {
                 text: opinionUrl,
                 width: 128,
@@ -389,7 +389,7 @@
             
             document.getElementById('qr-modal-title').innerText = name;
             
-            const opinionUrl = `${window.location.protocol}//${window.location.host}/opinar.html?slug=${slug}`;
+            const opinionUrl = appUrl(`opinar.html?slug=${slug}`);
             document.getElementById('qr-modal-link-text').innerText = opinionUrl;
             
             const qrContainer = document.getElementById('modal-qrcode');
@@ -571,7 +571,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
             try {
                 const user = await API.getMe(token);
                 if (user.role !== 'super_admin') {
-                    window.location.href = '/login.html';
+                    window.location.href = appUrl('login.html');
                     return;
                 }
                 document.getElementById('admin-name').innerText = user.username;
@@ -622,7 +622,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                             </div>
                         </td>
                         <td class="py-4 px-4 font-mono text-2xs text-indigo-600">
-                            <a href="/opinar.html?slug=${c.slug}" target="_blank" class="hover:underline">${c.slug} ↗</a>
+                            <a href="${appUrl(`opinar.html?slug=${c.slug}`)}" target="_blank" class="hover:underline">${c.slug} ↗</a>
                         </td>
                         <td class="py-4 px-4 text-2xs text-gray-400">
                             <a href="${getWriteReviewUrl(c.google_place_id)}" target="_blank" class="hover:underline text-blue-500 font-medium">Ver Maps ↗</a>
@@ -669,7 +669,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                         <div class="grid grid-cols-2 gap-2 text-2xs border-t border-b border-gray-100/50 py-2.5">
                             <div>
                                 <span class="block text-3xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Slug / ID URL</span>
-                                <a href="/opinar.html?slug=${c.slug}" target="_blank" class="hover:underline font-mono text-indigo-600 font-semibold block truncate">${c.slug} ↗</a>
+                                <a href="${appUrl(`opinar.html?slug=${c.slug}`)}" target="_blank" class="hover:underline font-mono text-indigo-600 font-semibold block truncate">${c.slug} ↗</a>
                             </div>
                             <div>
                                 <span class="block text-3xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Google Maps</span>
@@ -818,7 +818,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
 
         function logout() {
             localStorage.removeItem('token');
-            window.location.href = '/login.html';
+            window.location.href = appUrl('login.html');
         }
     </script>
 
@@ -850,7 +850,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                 </div>
                 <div>
                     <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-1">Link de Acceso</span>
-                    <a id="modal-login-link" href="/login.html" target="_blank" class="text-xs text-blue-500 hover:underline font-semibold block truncate"></a>
+                    <a id="modal-login-link" href="#" target="_blank" class="text-xs text-blue-500 hover:underline font-semibold block truncate"></a>
                 </div>
                 <div class="border-t border-gray-100/60 pt-4 flex flex-col items-center">
                     <span class="block text-4xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-center w-full">Código QR Público</span>
