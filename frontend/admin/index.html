@@ -96,10 +96,7 @@
                             <input type="url" id="logo-url" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Ej. https://misitio.com/logo.png">
                         </div>
 
-                        <div>
-                            <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Etiquetas (separadas por comas)</label>
-                            <input type="text" id="tags" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Comida rica, Mozo amable, Poca espera">
-                        </div>
+                        <input type="hidden" id="tags" value="">
 
                         <!-- Admin user credentials (only for creation) -->
                         <div id="credentials-section" class="border-t border-gray-100 pt-4 space-y-4">
@@ -293,8 +290,7 @@
                 // Auto-populate Logo URL using category image mapper
                 document.getElementById('logo-url').value = getSampleLogoUrl(res.name);
                 
-                // Auto-populate Tags
-                document.getElementById('tags').value = "Excelente atención, Rápido servicio, Muy limpio, Precios acordes";
+
                 
                 // Generate Admin Credentials
                 const adminUsername = `${slug}_admin`;
