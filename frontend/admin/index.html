@@ -248,10 +248,16 @@
         let lastGeneratedCredentials = null;
 
         function getWriteReviewUrl(placeId) {
-            if (placeId && placeId.startsWith('0x')) {
-                return `https://search.google.com/local/writereview?fid=${placeId}`;
+            if (placeId && (placeId.startsWith('http://') || placeId.startsWith('https://'))) {
+                return placeId;
             }
-            return `https://search.google.com/local/writereview?placeid=${placeId}`;
+            if (placeId && placeId.startsWith('0x') && placeId.includes(':0x')) {
+                return `https://www.google.com/maps/place//data=!4m3!3m2!1s${placeId}!12e1`;
+            }
+            if (placeId && placeId.startsWith('ChIJ')) {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId)}&query_place_id=${placeId}`;
+            }
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId || '')}`;
         }
 
         async function handleParseUrl() {
@@ -277,10 +283,10 @@
                 const slug = generateSlug(res.name);
                 document.getElementById('slug').value = slug;
 
-                // Update Place ID if found
+                // Preserve direct Google review URLs instead of collapsing them back to Place IDs.
                 const placeIdInput = document.getElementById('google-place-id');
-                if (res.place_id) {
-                    placeIdInput.value = res.place_id;
+                if (res.google_place_id || res.place_id) {
+                    placeIdInput.value = res.google_place_id || res.place_id;
                     showToast("Datos cargados correctamente de Google Maps", "success");
                 } else {
                     placeIdInput.value = "";

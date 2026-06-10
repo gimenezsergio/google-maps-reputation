@@ -259,9 +259,13 @@ def parse_google_maps_url(
             detail="El enlace ingresado corresponde a un punto en el mapa o a coordenadas geográficas, no a la ficha de un comercio. Por favor, busca el comercio en Google Maps, haz clic en Compartir y copia ese enlace."
         )
 
+    # Preserve the original Google URL for review redirects when available.
+    google_place_id = url if url.lower().startswith(("http://", "https://")) else place_id
+
     return {
         "name": name,
-        "place_id": place_id
+        "place_id": place_id,
+        "google_place_id": google_place_id
     }
 
 
@@ -329,5 +333,4 @@ def search_places_on_google(
         return results
     except Exception as e:
         return []
-
 

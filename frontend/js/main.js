@@ -9,6 +9,27 @@ let state = {
     loading: false
 };
 
+function buildGoogleMapsUrl(placeRef, placeName = "") {
+    if (!placeRef) {
+        return "https://www.google.com/maps";
+    }
+
+    if (placeRef.startsWith('http://') || placeRef.startsWith('https://')) {
+        return placeRef;
+    }
+
+    if (placeRef.startsWith('0x') && placeRef.includes(':0x')) {
+        return `https://www.google.com/maps/place//data=!4m3!3m2!1s${placeRef}!12e1`;
+    }
+
+    if (placeRef.startsWith('ChIJ')) {
+        const query = encodeURIComponent(placeName || placeRef);
+        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${placeRef}`;
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName || placeRef)}`;
+}
+
 // Initialize app on load
 document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
@@ -200,16 +221,7 @@ window.setRating = async (val) => {
             console.error("Error submitting positive feedback:", e);
         }
         
-        const placeId = state.commerce.google_place_id;
-        let reviewUrl;
-        if (placeId && (placeId.startsWith('http://') || placeId.startsWith('https://'))) {
-            reviewUrl = placeId;
-        } else if (placeId && placeId.startsWith('0x')) {
-            reviewUrl = `https://search.google.com/local/writereview?fid=${placeId}`;
-        } else {
-            reviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
-        }
-            
+        const reviewUrl = buildGoogleMapsUrl(state.commerce.google_place_id, state.commerce.name);
         window.location.href = reviewUrl;
     }
 };
@@ -285,15 +297,7 @@ window.copyAndRedirect = (text) => {
     showToast("¡Texto copiado al portapapeles!");
     
     setTimeout(() => {
-        const placeId = state.commerce.google_place_id;
-        let reviewUrl;
-        if (placeId && (placeId.startsWith('http://') || placeId.startsWith('https://'))) {
-            reviewUrl = placeId;
-        } else if (placeId && placeId.startsWith('0x')) {
-            reviewUrl = `https://search.google.com/local/writereview?fid=${placeId}`;
-        } else {
-            reviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
-        }
+        const reviewUrl = buildGoogleMapsUrl(state.commerce.google_place_id, state.commerce.name);
         window.open(reviewUrl, '_blank');
         state.step = 'gracias';
         render();

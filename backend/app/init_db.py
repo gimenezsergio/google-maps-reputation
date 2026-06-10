@@ -1,5 +1,6 @@
 import sys
 import os
+from sqlalchemy import text
 
 # Add parent directory to path so app can be imported
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,9 +14,30 @@ from app.models.user import User, UserRole
 from app.models.feedback import Feedback
 
 
+def run_sqlite_migrations():
+    """
+    Apply minimal additive migrations for long-lived SQLite deployments.
+    """
+    with engine.begin() as connection:
+        if connection.dialect.name != "sqlite":
+            return
+
+        columns = {
+            row[1]
+            for row in connection.execute(text("PRAGMA table_info(feedbacks)")).fetchall()
+        }
+
+        if "customer_email" not in columns:
+            print("Agregando columna faltante 'customer_email' a feedbacks...")
+            connection.execute(
+                text("ALTER TABLE feedbacks ADD COLUMN customer_email VARCHAR")
+            )
+
+
 def init_db():
     print("Creando tablas en la base de datos...")
     Base.metadata.create_all(bind=engine)
+    run_sqlite_migrations()
 
     db = SessionLocal()
     try:

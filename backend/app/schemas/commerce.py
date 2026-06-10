@@ -58,12 +58,12 @@ class MapsUrlParseRequest(BaseModel):
 class MapsUrlParseResponse(BaseModel):
     name: str
     place_id: Optional[str] = None
+    google_place_id: Optional[str] = None
 
 
 class MapsSearchResponse(BaseModel):
     name: str
     address: str
     google_place_id: str
-
 
 
