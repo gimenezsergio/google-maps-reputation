@@ -12,13 +12,13 @@ const API = {
         return response.json();
     },
 
-    async submitFeedback(slug, rating, comment = null, tags = []) {
+    async submitFeedback(slug, rating, comment = null, tags = [], customer_email = null) {
         const response = await fetch(`${API_BASE_URL}/public/commerce/${slug}/feedback`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ rating, comment, tags })
+            body: JSON.stringify({ rating, comment, tags, customer_email })
         });
         if (!response.ok) {
             const err = await response.json();

@@ -7,6 +7,7 @@ class FeedbackBase(BaseModel):
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
     tags: Optional[list[str]] = []
+    customer_email: Optional[str] = None
 
 
 

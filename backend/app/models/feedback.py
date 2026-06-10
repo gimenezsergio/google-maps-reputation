@@ -11,6 +11,7 @@ class Feedback(Base):
     commerce_id = Column(Integer, ForeignKey("commerces.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Integer, nullable=False)  # 1 to 5 stars
     comment = Column(String, nullable=True)   # Private feedback commentary
+    customer_email = Column(String, nullable=True)  # Customer contact email (mainly for negative ratings <= 3)
     tags = Column(JSON, default=list, nullable=True)  # Chosen tags (optional, mainly for ratings >= 4)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

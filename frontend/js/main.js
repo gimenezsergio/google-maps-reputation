@@ -102,7 +102,11 @@ function render() {
                 <div>
                     <h2 class="text-xl font-bold text-gray-800 mb-2">Queremos mejorar</h2>
                     <p class="text-xs text-gray-500 mb-4">Lamentamos que tu experiencia no haya sido perfecta. Cuéntanos qué falló para que la gerencia pueda solucionarlo directamente.</p>
-                    <textarea id="feedback-text" class="w-full border border-gray-200 rounded-2xl p-4 h-32 mb-4 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm text-gray-700" placeholder="¿Qué podemos hacer mejor? (Comida, servicio, ambiente...)"></textarea>
+                    <textarea id="feedback-text" class="w-full border border-gray-200 rounded-2xl p-4 h-28 mb-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm text-gray-700" placeholder="¿Qué podemos hacer mejor? (Comida, servicio, ambiente...)"></textarea>
+                    <div class="mb-4">
+                        <label for="feedback-email" class="block text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 pl-1">Tu Correo Electrónico (opcional)</label>
+                        <input type="email" id="feedback-email" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-xs text-gray-700 placeholder-gray-300" placeholder="nombre@correo.com">
+                    </div>
                     <button onclick="submitNegativeFeedback()" class="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold py-3.5 rounded-2xl hover:from-red-600 hover:to-rose-700 transition shadow-md shadow-red-100 text-sm">
                         Enviar comentario privado
                     </button>
@@ -221,13 +225,14 @@ window.toggleTag = (tag) => {
 
 window.submitNegativeFeedback = async () => {
     const comment = document.getElementById('feedback-text').value;
+    const email = document.getElementById('feedback-email').value;
     if (!comment.trim()) return;
 
     state.loading = true;
     render();
 
     try {
-        await API.submitFeedback(state.slug, state.rating, comment, []);
+        await API.submitFeedback(state.slug, state.rating, comment, [], email || null);
         state.step = 'gracias';
     } catch (e) {
         showToast(e.message || "Error al enviar el comentario");

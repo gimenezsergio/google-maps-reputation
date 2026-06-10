@@ -45,15 +45,18 @@ def create_public_feedback(
             detail="Comercio no encontrado"
         )
     
-    # Clean commentary for ratings >= 4 (comments are only meant for contencion 1-3)
+    # Clean commentary and email for ratings >= 4 (comments and email are only meant for contencion 1-3)
     comment = feedback_in.comment
+    customer_email = feedback_in.customer_email
     if feedback_in.rating >= 4:
         comment = None
+        customer_email = None
 
     db_feedback = Feedback(
         commerce_id=commerce.id,
         rating=feedback_in.rating,
         comment=comment,
+        customer_email=customer_email,
         tags=feedback_in.tags
     )
     db.add(db_feedback)
