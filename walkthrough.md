@@ -111,7 +111,15 @@ Al pegar un enlace de este tipo y presionar **Cargar**, el sistema mostrará un 
    `https://www.google.com/maps/place/data=!4m2!3m1!1s0x95bcc90090613b5b:0x2cf80e7955abf453?hl=es`
 3. Presiona **Cargar**. Deberías ver un toast rojo indicando que la URL corresponde a un punto geográfico o coordenadas.
 4. Ahora, intenta ingresar una URL comercial válida, como la de *Café de la Plaza*:
-   `https://www.google.com/maps/place/Caf%C3%A9+de+la+Plaza/@-34.5721111,-58.4556667,17z/data=!3m1!4b1!4m6!3m5!1s0x95bcb59b7dfb3d37:0x2c64e622ef5159b9!8m2!3d-34.5721111!4d-58.4556667!16s%2Fg%2F11b77m_jpy?entry=ttu`
+   `https://www.google.com/maps/place/data=!4m2!3m1!1s0x95bcb7cc9d854b17:0x94e08a6cf1d26cb9?hl=es`
 5. Presiona **Cargar**. Los datos de Café de la Plaza se cargarán exitosamente sin ningún error.
 
+---
 
+## Resolución de Errores 404 (Café de la Plaza Devoto)
+
+El identificador anterior (`ChIJ08NlGf3KvJURyW8Qk01N-sY`) generaba un error 404 de Google en el endpoint `/local/writereview` porque correspondía a una ficha desactualizada o no verificada para recibir opiniones directas por Place ID.
+
+Se ha resuelto actualizando el registro de base de datos (`backend/reputation.db`) para Café de la Plaza con su **FID Hexadecimal activo e inequívoco**:
+* **Hex FID**: `0x95bcb7cc9d854b17:0x94e08a6cf1d26cb9` (Café de la Plaza Villa Devoto, Av. Lincoln 3990).
+* Con esta actualización, el flujo redirige automáticamente al cliente a `https://search.google.com/local/writereview?fid=0x95bcb7cc9d854b17:0x94e08a6cf1d26cb9`, evitando el error 404 y abriendo de forma directa y exitosa el formulario de reseñas de Google.
