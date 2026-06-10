@@ -42,12 +42,9 @@ Sigue estos pasos para probar todas las funcionalidades:
 
 ### Paso 2: Flujo de Cliente Satisfecho (QR / Pantalla Pública)
 1. Entra a la URL del cliente para el local recién creado: [http://localhost:8000/opinar.html?slug=la-querencia](http://localhost:8000/opinar.html?slug=la-querencia).
-2. Selecciona una calificación de **5 estrellas**.
-3. Selecciona las etiquetas destacadas (ej. `Carne tierna`, `Mozo amable`).
-4. Haz clic en **Generar mi reseña con IA**.
-   * *Nota:* Si no has configurado tu clave `DEEPSEEK_API_KEY` en el archivo `.env`, la aplicación cargará automáticamente plantillas de contingencia personalizadas de forma inmediata y sin fallos.
-5. Elige una de las reseñas generadas por la IA para copiarla en el portapapeles.
-6. El sistema te redirigirá a la pantalla de opiniones de Google Maps de ese comercio para que pegues el texto.
+2. Selecciona una calificación de **5 estrellas** o **4 estrellas**.
+3. El sistema registrará la valoración positiva en la base de datos de forma inmediata y automática.
+4. Se mostrará una pantalla de carga premium con la leyenda *"Redirigiendo a Google Maps..."* y te redirigirá directamente a la sección de opiniones del comercio en Google Maps para que puedas valorar y escribir tu reseña allí directamente.
 
 ---
 
