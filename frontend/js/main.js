@@ -201,9 +201,14 @@ window.setRating = async (val) => {
         }
         
         const placeId = state.commerce.google_place_id;
-        const reviewUrl = placeId && placeId.startsWith('0x') 
-            ? `https://search.google.com/local/writereview?fid=${placeId}`
-            : `https://search.google.com/local/writereview?placeid=${placeId}`;
+        let reviewUrl;
+        if (placeId && (placeId.startsWith('http://') || placeId.startsWith('https://'))) {
+            reviewUrl = placeId;
+        } else if (placeId && placeId.startsWith('0x')) {
+            reviewUrl = `https://search.google.com/local/writereview?fid=${placeId}`;
+        } else {
+            reviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
+        }
             
         window.location.href = reviewUrl;
     }
@@ -281,9 +286,14 @@ window.copyAndRedirect = (text) => {
     
     setTimeout(() => {
         const placeId = state.commerce.google_place_id;
-        const reviewUrl = placeId && placeId.startsWith('0x') 
-            ? `https://search.google.com/local/writereview?fid=${placeId}`
-            : `https://search.google.com/local/writereview?placeid=${placeId}`;
+        let reviewUrl;
+        if (placeId && (placeId.startsWith('http://') || placeId.startsWith('https://'))) {
+            reviewUrl = placeId;
+        } else if (placeId && placeId.startsWith('0x')) {
+            reviewUrl = `https://search.google.com/local/writereview?fid=${placeId}`;
+        } else {
+            reviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
+        }
         window.open(reviewUrl, '_blank');
         state.step = 'gracias';
         render();
