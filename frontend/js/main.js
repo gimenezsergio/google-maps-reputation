@@ -59,14 +59,18 @@ function render() {
     }
 
     if (state.loading) {
+        const loadingText = state.rating >= 4 
+            ? 'Redirigiendo a Google Maps...' 
+            : (state.step === 'ai' ? 'DeepSeek está redactando tus opciones de reseña...' : 'Procesando...');
+        const badgeText = state.rating >= 4 ? 'G' : 'AI';
         container.innerHTML = `
             <div class="flex flex-col items-center py-12">
                 <div class="relative flex items-center justify-center">
                     <div class="animate-spin rounded-full h-14 w-14 border-b-2 border-indigo-600"></div>
-                    <div class="absolute text-indigo-600 font-semibold text-xs">AI</div>
+                    <div class="absolute text-indigo-600 font-semibold text-xs">${badgeText}</div>
                 </div>
                 <p class="text-gray-500 text-sm mt-6 text-center animate-pulse">
-                    ${state.step === 'ai' ? 'DeepSeek está redactando tus opciones de reseña...' : 'Procesando...'}
+                    ${loadingText}
                 </p>
             </div>
         `;
@@ -176,14 +180,29 @@ function render() {
 }
 
 // Rating interaction
-window.setRating = (val) => {
+window.setRating = async (val) => {
     state.rating = val;
     if (val <= 3) {
         state.step = 'contencion';
+        render();
     } else {
-        state.step = 'tags';
+        state.loading = true;
+        render();
+        
+        try {
+            // Register positive rating to database for stats
+            await API.submitFeedback(state.slug, state.rating, null, []);
+        } catch (e) {
+            console.error("Error submitting positive feedback:", e);
+        }
+        
+        const placeId = state.commerce.google_place_id;
+        const reviewUrl = placeId && placeId.startsWith('0x') 
+            ? `https://search.google.com/local/writereview?fid=${placeId}`
+            : `https://search.google.com/local/writereview?placeid=${placeId}`;
+            
+        window.location.href = reviewUrl;
     }
-    render();
 };
 
 window.goToStep = (s) => {
