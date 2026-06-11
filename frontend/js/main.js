@@ -6,28 +6,73 @@ let state = {
     aiResults: [],
     commerce: null,
     slug: '',
-    loading: false
+    loading: false,
+    copiedReviewText: false
 };
 
-function buildGoogleMapsUrl(placeRef, placeName = "") {
+function extractHexPlaceRef(placeRef = "") {
+    const match = String(placeRef).match(/0x[0-9a-fA-F]+:0x[0-9a-fA-F]+/);
+    return match ? match[0] : null;
+}
+
+function buildGoogleWriteReviewUrl(placeRef, placeName = "") {
     if (!placeRef) {
         return "https://www.google.com/maps";
     }
 
-    if (placeRef.startsWith('http://') || placeRef.startsWith('https://')) {
-        return placeRef;
+    const normalizedPlaceRef = String(placeRef).trim();
+    const hexPlaceRef = extractHexPlaceRef(normalizedPlaceRef);
+
+    if (hexPlaceRef) {
+        return `https://www.google.com/maps/place//data=!4m3!3m2!1s${hexPlaceRef}!12e1`;
     }
 
-    if (placeRef.startsWith('0x') && placeRef.includes(':0x')) {
-        return `https://www.google.com/maps/place//data=!4m3!3m2!1s${placeRef}!12e1`;
+    if (normalizedPlaceRef.startsWith('http://') || normalizedPlaceRef.startsWith('https://')) {
+        return normalizedPlaceRef;
     }
 
-    if (placeRef.startsWith('ChIJ')) {
+    if (normalizedPlaceRef.startsWith('ChIJ')) {
         const query = encodeURIComponent(placeName || placeRef);
-        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${placeRef}`;
+        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${normalizedPlaceRef}`;
     }
 
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName || placeRef)}`;
+}
+
+function buildGoogleReviewsUrl(placeRef, placeName = "") {
+    if (!placeRef) {
+        return "https://www.google.com/maps";
+    }
+
+    const normalizedPlaceRef = String(placeRef).trim();
+    const hexPlaceRef = extractHexPlaceRef(normalizedPlaceRef);
+
+    if (hexPlaceRef) {
+        return `https://www.google.com/maps/place//data=!4m4!3m3!1s${hexPlaceRef}!9m1!1b1`;
+    }
+
+    if (normalizedPlaceRef.startsWith('ChIJ')) {
+        const query = encodeURIComponent(placeName || placeRef);
+        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${normalizedPlaceRef}`;
+    }
+
+    if (normalizedPlaceRef.startsWith('http://') || normalizedPlaceRef.startsWith('https://')) {
+        return normalizedPlaceRef;
+    }
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName || placeRef)}`;
+}
+
+function isMobileDevice() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera || "";
+    return /android|iphone|ipad|ipod|mobile/i.test(ua);
+}
+
+function startGoogleMapsFlow({ copiedReviewText = false } = {}) {
+    state.copiedReviewText = copiedReviewText;
+
+    const writeReviewUrl = buildGoogleWriteReviewUrl(state.commerce.google_place_id, state.commerce.name);
+    window.location.href = writeReviewUrl;
 }
 
 // Initialize app on load
@@ -81,7 +126,7 @@ function render() {
 
     if (state.loading) {
         const loadingText = state.rating >= 4 
-            ? 'Redirigiendo a Google Maps...' 
+            ? 'Preparando Google Maps...' 
             : (state.step === 'ai' ? 'DeepSeek está redactando tus opciones de reseña...' : 'Procesando...');
         const badgeText = state.rating >= 4 ? 'G' : 'AI';
         container.innerHTML = `
@@ -201,6 +246,7 @@ function render() {
                 </div>
             `;
             break;
+
     }
 }
 
@@ -221,8 +267,7 @@ window.setRating = async (val) => {
             console.error("Error submitting positive feedback:", e);
         }
         
-        const reviewUrl = buildGoogleMapsUrl(state.commerce.google_place_id, state.commerce.name);
-        window.location.href = reviewUrl;
+        startGoogleMapsFlow();
     }
 };
 
@@ -297,10 +342,7 @@ window.copyAndRedirect = (text) => {
     showToast("¡Texto copiado al portapapeles!");
     
     setTimeout(() => {
-        const reviewUrl = buildGoogleMapsUrl(state.commerce.google_place_id, state.commerce.name);
-        window.open(reviewUrl, '_blank');
-        state.step = 'gracias';
-        render();
+        startGoogleMapsFlow({ copiedReviewText: true });
     }, 1200);
 };
 
