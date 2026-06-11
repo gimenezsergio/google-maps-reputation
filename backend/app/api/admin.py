@@ -1,3 +1,5 @@
+import re
+import urllib.parse
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -16,6 +18,53 @@ from app.schemas.commerce import (
 )
 
 router = APIRouter()
+
+HEX_PLACE_RE = re.compile(r"0x[0-9a-fA-F]+:0x[0-9a-fA-F]+")
+TEXT_PLACE_ID_RE = re.compile(r"ChIJ[a-zA-Z0-9_-]{23}")
+
+
+def _extract_hex_place_ref(*values: str | None) -> str | None:
+    for value in values:
+        if not value:
+            continue
+        match = HEX_PLACE_RE.search(value)
+        if match:
+            return match.group(0)
+    return None
+
+
+def _extract_text_place_id(*values: str | None) -> str | None:
+    for value in values:
+        if not value:
+            continue
+        match = TEXT_PLACE_ID_RE.search(value)
+        if match:
+            return match.group(0)
+    return None
+
+
+def _build_write_review_uri(hex_place_ref: str) -> str:
+    return f"https://www.google.com/maps/place//data=!4m3!3m2!1s{hex_place_ref}!12e1"
+
+
+def _normalize_google_place_ref(value: str | None) -> str | None:
+    if not value:
+        return value
+
+    normalized = value.strip()
+    if not normalized:
+        return normalized
+
+    if normalized.startswith("0x") and ":0x" in normalized:
+        return _build_write_review_uri(normalized)
+
+    if normalized.startswith(("http://", "https://")):
+        hex_place_ref = _extract_hex_place_ref(normalized)
+        if hex_place_ref:
+            return _build_write_review_uri(hex_place_ref)
+        return normalized
+
+    return normalized
 
 
 @router.post("/commerce", response_model=CommerceOut)
@@ -50,7 +99,7 @@ def create_commerce_and_admin(
         name=commerce_in.name,
         slug=commerce_in.slug,
         logo_url=commerce_in.logo_url,
-        google_place_id=commerce_in.google_place_id,
+        google_place_id=_normalize_google_place_ref(commerce_in.google_place_id),
         tags=commerce_in.tags,
         is_active=True
     )
@@ -104,6 +153,9 @@ def update_commerce(
         )
     
     update_data = commerce_in.model_dump(exclude_unset=True)
+
+    if "google_place_id" in update_data:
+        update_data["google_place_id"] = _normalize_google_place_ref(update_data["google_place_id"])
     
     if "slug" in update_data and update_data["slug"] != commerce.slug:
         existing_commerce = db.query(Commerce).filter(Commerce.slug == update_data["slug"]).first()
@@ -158,8 +210,6 @@ def parse_google_maps_url(
     Only accessible by Super Admins.
     """
     import urllib.request
-    import urllib.parse
-    import re
 
     url = payload.url.strip()
     if not url:
@@ -187,25 +237,8 @@ def parse_google_maps_url(
         pass
 
     # 2. Try to extract Place ID or Hex FID
-    place_id = None
-
-    # Search in URL (e.g. placeid=ChIJ... or /place/ChIJ... or hex coordinates 0x...:0x...)
-    match_place_id = re.search(r'ChIJ[a-zA-Z0-9_-]{23}', resolved_url)
-    match_hex_id = re.search(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', resolved_url)
-    
-    if match_place_id:
-        place_id = match_place_id.group(0)
-    elif match_hex_id:
-        place_id = match_hex_id.group(0)
-    elif html:
-        # Fallback to search in HTML body
-        place_ids = re.findall(r'ChIJ[a-zA-Z0-9_-]{23}', html)
-        if place_ids:
-            place_id = place_ids[0]
-        else:
-            hex_ids = re.findall(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', html)
-            if hex_ids:
-                place_id = hex_ids[0]
+    hex_place_ref = _extract_hex_place_ref(resolved_url, html, url)
+    place_id = _extract_text_place_id(resolved_url, html, url)
 
     # 3. Extract business name
     name = "Comercio"
@@ -259,12 +292,14 @@ def parse_google_maps_url(
             detail="El enlace ingresado corresponde a un punto en el mapa o a coordenadas geográficas, no a la ficha de un comercio. Por favor, busca el comercio en Google Maps, haz clic en Compartir y copia ese enlace."
         )
 
-    # Preserve the original Google URL for review redirects when available.
-    google_place_id = url if url.lower().startswith(("http://", "https://")) else place_id
+    # Prefer the canonical write-review URL when we can derive the Maps hex place ref.
+    google_place_id = _normalize_google_place_ref(
+        hex_place_ref or (url if url.lower().startswith(("http://", "https://")) else place_id)
+    )
 
     return {
         "name": name,
-        "place_id": place_id,
+        "place_id": hex_place_ref or place_id,
         "google_place_id": google_place_id
     }
 
@@ -333,4 +368,3 @@ def search_places_on_google(
         return results
     except Exception as e:
         return []
-
