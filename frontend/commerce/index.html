@@ -325,7 +325,7 @@
             
             document.getElementById('qr-modal-title').innerText = currentCommerce.name;
             
-            const opinionUrl = `${window.location.protocol}//${window.location.host}/opinar.html?slug=${currentCommerce.slug}`;
+            const opinionUrl = appUrl(`opinar.html?slug=${currentCommerce.slug}`);
             document.getElementById('qr-modal-link-text').innerText = opinionUrl;
             
             const qrContainer = document.getElementById('modal-qrcode');
@@ -381,6 +381,23 @@
             link.click();
             document.body.removeChild(link);
             showToast("Código QR descargado con éxito");
+        }
+
+        async function copyQRLink() {
+            if (!currentCommerce) return;
+            const opinionUrl = appUrl(`opinar.html?slug=${currentCommerce.slug}`);
+            try {
+                await navigator.clipboard.writeText(opinionUrl);
+                showToast("Link copiado al portapapeles");
+            } catch (err) {
+                showToast("No se pudo copiar el link", "error");
+            }
+        }
+
+        function openQRLink() {
+            if (!currentCommerce) return;
+            const opinionUrl = appUrl(`opinar.html?slug=${currentCommerce.slug}`);
+            window.open(opinionUrl, '_blank');
         }
 
         function printQR() {
@@ -465,21 +482,29 @@
 
             <div class="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-2xl border border-gray-100">
                 <div id="modal-qrcode" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-center"></div>
-                <p id="qr-modal-link-text" class="text-4xs text-gray-400 font-mono mt-4 truncate max-w-full text-center"></p>
+                <a id="qr-modal-link-text" target="_blank" rel="noopener noreferrer" class="text-4xs text-indigo-600 font-mono mt-4 max-w-full text-center break-all hover:underline"></a>
             </div>
 
-            <div class="mt-6 flex space-x-2">
-                <button onclick="downloadQR()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-100">
+            <div class="mt-6 space-y-3">
+                <button onclick="downloadQR()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-1.5 shadow-md shadow-indigo-100">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     <span>Descargar</span>
                 </button>
-                <button onclick="printQR()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-3a2 2 0 00-2-2H9a2 2 0 00-2 2v3a2 2 0 002 2zm5-14V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-                    <span>Imprimir</span>
-                </button>
-                <button onclick="closeQRModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-4 rounded-xl text-xs transition">
-                    Cerrar
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="openQRLink()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold py-2.5 px-3 rounded-xl text-xs transition text-center">
+                        Abrir link
+                    </button>
+                    <button onclick="copyQRLink()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold py-2.5 px-3 rounded-xl text-xs transition text-center">
+                        Copiar link
+                    </button>
+                    <button onclick="printQR()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-3a2 2 0 00-2-2H9a2 2 0 00-2 2v3a2 2 0 002 2zm5-14V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+                        <span>Imprimir</span>
+                    </button>
+                    <button onclick="closeQRModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 px-3 rounded-xl text-xs transition text-center">
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
