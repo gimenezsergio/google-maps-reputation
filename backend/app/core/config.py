@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # DeepSeek Configuration
     DEEPSEEK_API_KEY: str = ""
 
+    # Google Places API Configuration
+    GOOGLE_PLACES_API_KEY: str = ""
+
     # Super Admin Configuration
     SUPER_ADMIN_USERNAME: str = "admin"
     SUPER_ADMIN_PASSWORD: str = "admin123"
