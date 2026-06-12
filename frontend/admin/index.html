@@ -75,6 +75,18 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Google Places API (New) Search -->
+                        <div id="places-search-section">
+                            <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Buscar Negocio en Google</label>
+                            <div class="relative">
+                                <input type="text" id="places-search-query" class="w-full pl-3 pr-24 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Ej. Cafe de la Plaza Devoto...">
+                                <button type="button" id="search-places-btn" onclick="handleSearchPlaces()" class="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-3xs transition shadow-sm">
+                                    Buscar
+                                </button>
+                            </div>
+                            <div id="search-results-container" class="hidden mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50/70 p-2 space-y-1.5"></div>
+                        </div>
                         
                         <div>
                             <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nombre Comercial</label>
@@ -252,7 +264,7 @@
             return match ? match[0] : null;
         }
 
-        function getWriteReviewUrl(placeId) {
+        function getWriteReviewUrl(placeId, name = "") {
             const hexPlaceRef = extractHexPlaceRef(placeId);
             if (hexPlaceRef) {
                 return `https://www.google.com/maps/place//data=!4m3!3m2!1s${hexPlaceRef}!12e1`;
@@ -264,9 +276,88 @@
                 return `https://www.google.com/maps/place//data=!4m3!3m2!1s${placeId}!12e1`;
             }
             if (placeId && placeId.startsWith('ChIJ')) {
-                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId)}&query_place_id=${placeId}`;
+                const queryVal = name ? encodeURIComponent(name) : encodeURIComponent(placeId);
+                return `https://www.google.com/maps/search/?api=1&query=${queryVal}&query_place_id=${placeId}`;
             }
-            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId || '')}`;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name || placeId || '')}`;
+        }
+
+        async function handleSearchPlaces() {
+            const queryInput = document.getElementById('places-search-query');
+            const q = queryInput.value.trim();
+            if (!q) {
+                showToast("Por favor, escribe un nombre o dirección para buscar", "error");
+                return;
+            }
+
+            const btn = document.getElementById('search-places-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Buscando...";
+            btn.disabled = true;
+
+            const resultsContainer = document.getElementById('search-results-container');
+            resultsContainer.innerHTML = `<div class="text-center py-4 text-3xs text-gray-400">Buscando negocios en Google...</div>`;
+            resultsContainer.classList.remove('hidden');
+
+            try {
+                const results = await API.searchPlaces(token, q);
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = `<div class="text-center py-4 text-3xs text-gray-400">No se encontraron resultados.</div>`;
+                    return;
+                }
+
+                resultsContainer.innerHTML = results.map(place => {
+                    const escapedPlace = JSON.stringify(place).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    return `
+                        <div class="flex items-center justify-between p-2 hover:bg-white rounded-lg border border-transparent hover:border-gray-150 transition cursor-pointer" onclick="selectPlace(${escapedPlace})">
+                            <div class="min-w-0 flex-1 pr-2">
+                                <span class="font-semibold text-xs text-gray-800 block truncate">${place.name}</span>
+                                <span class="text-4xs text-gray-400 block truncate">${place.address}</span>
+                            </div>
+                            <button type="button" class="shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold px-2 py-1 rounded-md text-3xs transition">
+                                Usar
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                resultsContainer.innerHTML = `<div class="text-center py-4 text-3xs text-red-500">Error: ${err.message}</div>`;
+                showToast("Error al buscar: " + err.message, "error");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function selectPlace(place) {
+            document.getElementById('name').value = place.name;
+            const slug = generateSlug(place.name);
+            document.getElementById('slug').value = slug;
+            document.getElementById('google-place-id').value = place.google_place_id;
+            
+            // Show address
+            let addressRef = document.getElementById('selected-place-address');
+            if (!addressRef) {
+                const parentDiv = document.getElementById('google-place-id').parentNode;
+                addressRef = document.createElement('p');
+                addressRef.id = 'selected-place-address';
+                addressRef.className = 'text-4xs text-gray-400 mt-1 font-medium italic';
+                parentDiv.appendChild(addressRef);
+            }
+            addressRef.innerText = `Dirección: ${place.address}`;
+            addressRef.classList.remove('hidden');
+
+            document.getElementById('logo-url').value = getSampleLogoUrl(place.name);
+
+            // Generate credentials
+            const adminUsername = `${slug}_admin`;
+            const adminPassword = generateRandomPassword(slug);
+            document.getElementById('admin-username').value = adminUsername;
+            document.getElementById('admin-password').value = adminPassword;
+
+            // Hide search results container
+            document.getElementById('search-results-container').classList.add('hidden');
+            showToast(`Negocio "${place.name}" seleccionado`, "success");
         }
 
         async function handleParseUrl() {
@@ -655,7 +746,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                             <a href="${appUrl(`opinar.html?slug=${c.slug}`)}" target="_blank" class="hover:underline">${c.slug} ↗</a>
                         </td>
                         <td class="py-4 px-4 text-2xs text-gray-400">
-                            <a href="${getWriteReviewUrl(c.google_place_id)}" target="_blank" class="hover:underline text-blue-500 font-medium">Ver Maps ↗</a>
+                            <a href="${getWriteReviewUrl(c.google_place_id, c.name)}" target="_blank" class="hover:underline text-blue-500 font-medium">Ver Maps ↗</a>
                         </td>
                         <td class="py-4 px-4">
                             <span class="px-2.5 py-1 rounded-full text-3xs font-semibold ${c.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}">
@@ -703,7 +794,7 @@ Link de Login: ${lastGeneratedCredentials.link}`;
                             </div>
                             <div>
                                 <span class="block text-3xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Google Maps</span>
-                                <a href="${getWriteReviewUrl(c.google_place_id)}" target="_blank" class="hover:underline text-blue-500 font-semibold block truncate">Ver Maps ↗</a>
+                                <a href="${getWriteReviewUrl(c.google_place_id, c.name)}" target="_blank" class="hover:underline text-blue-500 font-semibold block truncate">Ver Maps ↗</a>
                             </div>
                         </div>
                         
@@ -776,8 +867,9 @@ Link de Login: ${lastGeneratedCredentials.link}`;
             document.getElementById('logo-url').value = c.logo_url || '';
             document.getElementById('tags').value = c.tags ? c.tags.join(', ') : '';
 
-            // Hide maps-url-section in edit mode
+            // Hide maps-url-section and search section in edit mode
             document.getElementById('maps-url-section').classList.add('hidden');
+            document.getElementById('places-search-section').classList.add('hidden');
 
             // Hide admin credentials (edit route doesn't update password)
             document.getElementById('credentials-section').classList.add('hidden');
@@ -830,6 +922,21 @@ Link de Login: ${lastGeneratedCredentials.link}`;
             // Show maps-url-section again and clear input
             document.getElementById('maps-url-section').classList.remove('hidden');
             document.getElementById('maps-url').value = '';
+
+            // Show and reset places search section
+            document.getElementById('places-search-section').classList.remove('hidden');
+            const searchInput = document.getElementById('places-search-query');
+            if (searchInput) searchInput.value = '';
+            const resultsContainer = document.getElementById('search-results-container');
+            if (resultsContainer) {
+                resultsContainer.classList.add('hidden');
+                resultsContainer.innerHTML = '';
+            }
+            const addressRef = document.getElementById('selected-place-address');
+            if (addressRef) {
+                addressRef.innerText = '';
+                addressRef.classList.add('hidden');
+            }
 
             // Show admin credentials again
             document.getElementById('credentials-section').classList.remove('hidden');
