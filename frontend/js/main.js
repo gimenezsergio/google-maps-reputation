@@ -32,8 +32,7 @@ function buildGoogleWriteReviewUrl(placeRef, placeName = "") {
     }
 
     if (normalizedPlaceRef.startsWith('ChIJ')) {
-        const query = encodeURIComponent(placeName || placeRef);
-        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${normalizedPlaceRef}`;
+        return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(normalizedPlaceRef)}`;
     }
 
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName || placeRef)}`;
@@ -52,8 +51,7 @@ function buildGoogleReviewsUrl(placeRef, placeName = "") {
     }
 
     if (normalizedPlaceRef.startsWith('ChIJ')) {
-        const query = encodeURIComponent(placeName || placeRef);
-        return `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${normalizedPlaceRef}`;
+        return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(normalizedPlaceRef)}`;
     }
 
     if (normalizedPlaceRef.startsWith('http://') || normalizedPlaceRef.startsWith('https://')) {

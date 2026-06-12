@@ -65,18 +65,6 @@
                         <input type="hidden" id="edit-id">
                         <input type="hidden" id="slug">
 
-                        <!-- Google Maps URL Link Parsing -->
-                        <div id="maps-url-section">
-                            <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Enlace de Google Maps (Carga Automática)</label>
-                            <div class="relative">
-                                <input type="url" id="maps-url" class="w-full pl-3 pr-20 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Pega el link de Google Maps...">
-                                <button type="button" id="parse-url-btn" onclick="handleParseUrl()" class="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-lg text-3xs transition">
-                                    Cargar
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Google Places API (New) Search -->
                         <div id="places-search-section">
                             <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Buscar Negocio en Google</label>
                             <div class="relative">
@@ -86,21 +74,12 @@
                                 </button>
                             </div>
                             <div id="search-results-container" class="hidden mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl bg-gray-50/70 p-2 space-y-1.5"></div>
+                            <input type="hidden" id="google-place-id">
                         </div>
                         
                         <div>
                             <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nombre Comercial</label>
                             <input type="text" id="name" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Ej. El Noble Gourmet">
-                        </div>
-
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="block text-2xs font-bold text-gray-400 uppercase tracking-wider">Referencia Google Maps</label>
-                                <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" class="text-3xs text-indigo-500 hover:underline font-semibold flex items-center">
-                                    Buscador de IDs ↗
-                                </a>
-                            </div>
-                            <input type="text" id="google-place-id" required class="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none text-xs text-gray-700 placeholder-gray-300" placeholder="Ej. URL de review o identificador de Google Maps">
                         </div>
 
                         <div>
@@ -276,8 +255,7 @@
                 return `https://www.google.com/maps/place//data=!4m3!3m2!1s${placeId}!12e1`;
             }
             if (placeId && placeId.startsWith('ChIJ')) {
-                const queryVal = name ? encodeURIComponent(name) : encodeURIComponent(placeId);
-                return `https://www.google.com/maps/search/?api=1&query=${queryVal}&query_place_id=${placeId}`;
+                return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
             }
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name || placeId || '')}`;
         }
@@ -334,8 +312,7 @@
             const slug = generateSlug(place.name);
             document.getElementById('slug').value = slug;
             document.getElementById('google-place-id').value = place.google_place_id;
-            
-            // Show address
+
             let addressRef = document.getElementById('selected-place-address');
             if (!addressRef) {
                 const parentDiv = document.getElementById('google-place-id').parentNode;
@@ -349,69 +326,13 @@
 
             document.getElementById('logo-url').value = getSampleLogoUrl(place.name);
 
-            // Generate credentials
             const adminUsername = `${slug}_admin`;
             const adminPassword = generateRandomPassword(slug);
             document.getElementById('admin-username').value = adminUsername;
             document.getElementById('admin-password').value = adminPassword;
 
-            // Hide search results container
             document.getElementById('search-results-container').classList.add('hidden');
             showToast(`Negocio "${place.name}" seleccionado`, "success");
-        }
-
-        async function handleParseUrl() {
-            const urlInput = document.getElementById('maps-url');
-            const url = urlInput.value.trim();
-            if (!url) {
-                showToast("Por favor, ingresa una URL de Google Maps", "error");
-                return;
-            }
-
-            const btn = document.getElementById('parse-url-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "Cargando...";
-            btn.disabled = true;
-
-            try {
-                const res = await API.parseMapsUrl(token, url);
-                
-                // Update Name
-                document.getElementById('name').value = res.name;
-                
-                // Update Slug hidden input
-                const slug = generateSlug(res.name);
-                document.getElementById('slug').value = slug;
-
-                // Preserve direct Google review URLs instead of collapsing them back to Place IDs.
-                const placeIdInput = document.getElementById('google-place-id');
-                if (res.google_place_id || res.place_id) {
-                    placeIdInput.value = res.google_place_id || res.place_id;
-                    showToast("Datos cargados correctamente de Google Maps", "success");
-                } else {
-                    placeIdInput.value = "";
-                    showToast("Nombre cargado. Completa el Place ID manualmente.", "warning");
-                }
-
-                // Auto-populate Logo URL using category image mapper
-                document.getElementById('logo-url').value = getSampleLogoUrl(res.name);
-                
-
-                
-                // Generate Admin Credentials
-                const adminUsername = `${slug}_admin`;
-                const adminPassword = generateRandomPassword(slug);
-                document.getElementById('admin-username').value = adminUsername;
-                document.getElementById('admin-password').value = adminPassword;
-                
-                // Clear the URL input to keep it clean
-                urlInput.value = "";
-            } catch (err) {
-                showToast("Error al cargar la URL: " + err.message, "error");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
         }
 
         function getSampleLogoUrl(name) {
@@ -867,10 +788,6 @@ Link de Login: ${lastGeneratedCredentials.link}`;
             document.getElementById('logo-url').value = c.logo_url || '';
             document.getElementById('tags').value = c.tags ? c.tags.join(', ') : '';
 
-            // Hide maps-url-section and search section in edit mode
-            document.getElementById('maps-url-section').classList.add('hidden');
-            document.getElementById('places-search-section').classList.add('hidden');
-
             // Hide admin credentials (edit route doesn't update password)
             document.getElementById('credentials-section').classList.add('hidden');
             document.getElementById('admin-username').required = false;
@@ -918,10 +835,6 @@ Link de Login: ${lastGeneratedCredentials.link}`;
             document.getElementById('google-place-id').value = '';
             document.getElementById('logo-url').value = '';
             document.getElementById('tags').value = '';
-            
-            // Show maps-url-section again and clear input
-            document.getElementById('maps-url-section').classList.remove('hidden');
-            document.getElementById('maps-url').value = '';
 
             // Show and reset places search section
             document.getElementById('places-search-section').classList.remove('hidden');

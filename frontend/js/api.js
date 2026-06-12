@@ -152,22 +152,6 @@ const API = {
         return response.json();
     },
 
-    async parseMapsUrl(token, url) {
-        const response = await fetch(`${API_BASE_URL}/admin/parse-maps-url`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ url })
-        });
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Error al procesar el enlace de Google Maps");
-        }
-        return response.json();
-    },
-
     async searchPlaces(token, q) {
         const response = await fetch(`${API_BASE_URL}/admin/search-places?q=${encodeURIComponent(q)}`, {
             headers: {
@@ -175,7 +159,8 @@ const API = {
             }
         });
         if (!response.ok) {
-            throw new Error("Error al buscar comercios en Google Maps");
+            const err = await response.json();
+            throw new Error(err.detail || "Error al buscar comercios en Google Maps");
         }
         return response.json();
     },
