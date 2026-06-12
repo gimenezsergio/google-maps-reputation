@@ -1,12 +1,13 @@
+import httpx
 import re
+import time
 import urllib.parse
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import httpx
 
-from app.core.config import settings
 from app.api import deps
+from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.commerce import Commerce
 from app.models.user import User, UserRole
@@ -70,6 +71,80 @@ def _normalize_google_place_ref(value: str | None) -> str | None:
         return normalized
 
     return normalized
+
+
+def _build_places_search_payloads(query: str) -> List[dict[str, Any]]:
+    normalized = " ".join(query.split())
+    payloads: List[dict[str, Any]] = [
+        {
+            "textQuery": normalized,
+            "languageCode": "es",
+            "regionCode": "AR",
+            "maxResultCount": 8,
+        }
+    ]
+
+    lower_query = normalized.lower()
+    has_location_hint = any(
+        term in lower_query
+        for term in ("buenos aires", "caba", "capital federal", "argentina")
+    )
+    if not has_location_hint:
+        payloads.append(
+            {
+                "textQuery": f"{normalized} Buenos Aires Argentina",
+                "languageCode": "es",
+                "regionCode": "AR",
+                "maxResultCount": 8,
+            }
+        )
+
+    return payloads
+
+
+def _search_google_places(query: str, api_key: str) -> list[dict[str, Any]]:
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
+    }
+
+    last_error: httpx.RequestError | None = None
+    with httpx.Client(timeout=10.0, trust_env=False) as client:
+        for payload in _build_places_search_payloads(query):
+            for attempt in range(3):
+                try:
+                    response = client.post(
+                        "https://places.googleapis.com/v1/places:searchText",
+                        headers=headers,
+                        json=payload,
+                    )
+                except httpx.RequestError as exc:
+                    last_error = exc
+                    if attempt < 2:
+                        time.sleep(0.35 * (attempt + 1))
+                        continue
+                    break
+
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Google Places API retornó error {response.status_code}: {response.text}",
+                    )
+
+                data = response.json()
+                places = data.get("places", [])
+                if places:
+                    return places
+                break
+
+    if last_error is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error de comunicación con Google Places API: {last_error}",
+        )
+
+    return []
 
 
 @router.post("/commerce", response_model=CommerceOut)
@@ -328,37 +403,15 @@ def search_places_on_google(
     if not query:
         return []
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": settings.GOOGLE_PLACES_API_KEY,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress"
-    }
-    payload = {
-        "textQuery": query
-    }
-
     try:
-        with httpx.Client(timeout=10.0) as client:
-            response = client.post(
-                "https://places.googleapis.com/v1/places:searchText",
-                headers=headers,
-                json=payload
-            )
-        
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Google Places API retornó error {response.status_code}: {response.text}"
-            )
-        
-        data = response.json()
-        places = data.get("places", [])
+        places = _search_google_places(query, settings.GOOGLE_PLACES_API_KEY)
+
         results = []
-        for p in places:
-            place_id = p.get("id")
-            display_name = p.get("displayName", {})
+        for place in places:
+            place_id = place.get("id")
+            display_name = place.get("displayName", {})
             name = display_name.get("text", "")
-            address = p.get("formattedAddress", "")
+            address = place.get("formattedAddress", "")
             if place_id:
                 results.append({
                     "name": name,
