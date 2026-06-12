@@ -3,7 +3,9 @@ import urllib.parse
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import httpx
 
+from app.core.config import settings
 from app.api import deps
 from app.core.security import get_password_hash
 from app.models.commerce import Commerce
@@ -53,6 +55,9 @@ def _normalize_google_place_ref(value: str | None) -> str | None:
 
     normalized = value.strip()
     if not normalized:
+        return normalized
+
+    if normalized.startswith("ChIJ"):
         return normalized
 
     if normalized.startswith("0x") and ":0x" in normalized:
@@ -310,61 +315,59 @@ def search_places_on_google(
     current_super_admin: User = Depends(deps.get_current_super_admin)
 ) -> Any:
     """
-    Search for places/businesses on Google Maps without an API key.
+    Search for places/businesses using Google Places API (New).
     Only accessible by Super Admins.
     """
-    import urllib.request
-    import urllib.parse
-    import json
-    import re
+    if not settings.GOOGLE_PLACES_API_KEY or settings.GOOGLE_PLACES_API_KEY.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La API Key de Google Places no está configurada en el servidor."
+        )
 
     query = q.strip()
     if not query:
         return []
 
-    url = f"https://www.google.com/search?tbm=map&authuser=0&hl=es&gl=ar&q={urllib.parse.quote(query)}"
-    req = urllib.request.Request(
-        url, 
-        headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-            'Cookie': 'CONSENT=YES+cb.20210328-17-p0.es+FX+999'
-        }
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": settings.GOOGLE_PLACES_API_KEY,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress"
+    }
+    payload = {
+        "textQuery": query
+    }
 
     try:
-        with urllib.request.urlopen(req, timeout=5) as response:
-            body = response.read().decode('utf-8', errors='ignore')
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post(
+                "https://places.googleapis.com/v1/places:searchText",
+                headers=headers,
+                json=payload
+            )
         
-        if body.startswith(")]}'"):
-            json_text = body[4:].strip()
-        else:
-            json_text = body.strip()
-
-        data = json.loads(json_text)
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Google Places API retornó error {response.status_code}: {response.text}"
+            )
+        
+        data = response.json()
+        places = data.get("places", [])
         results = []
-        
-        def extract_listings(item):
-            if isinstance(item, list):
-                if len(item) >= 3 and isinstance(item[0], int) and isinstance(item[1], str) and isinstance(item[2], list):
-                    sublist = item[2][0]
-                    if isinstance(sublist, list) and len(sublist) >= 3:
-                        hex_id = sublist[2]
-                        if isinstance(hex_id, str) and re.match(r'0x[0-9a-fA-F]+:0x[0-9a-fA-F]+', hex_id):
-                            parts = item[1].split(',')
-                            name = parts[0].strip()
-                            address = ",".join(parts[1:]).strip() if len(parts) > 1 else "Google Maps"
-                            
-                            if not any(r['google_place_id'] == hex_id for r in results):
-                                results.append({
-                                    "name": name,
-                                    "address": address,
-                                    "google_place_id": hex_id
-                                })
-                for sub in item:
-                    extract_listings(sub)
-                    
-        extract_listings(data)
+        for p in places:
+            place_id = p.get("id")
+            display_name = p.get("displayName", {})
+            name = display_name.get("text", "")
+            address = p.get("formattedAddress", "")
+            if place_id:
+                results.append({
+                    "name": name,
+                    "address": address or "Google Maps",
+                    "google_place_id": place_id
+                })
         return results
-    except Exception as e:
-        return []
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error de comunicación con Google Places API: {exc}"
+        )
